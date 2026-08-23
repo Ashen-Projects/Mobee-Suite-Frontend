@@ -1,0 +1,21 @@
+:root {
+  /* Change this palette to rebrand the complete application. */
+  --app-color-primary-25: #fffdf5;
+  --app-color-primary-50: #fff9e6;
+  --app-color-primary-100: #fff2bf;
+  --app-color-primary-200: #ffe680;
+  --app-color-primary-300: #ffd335;
+  --app-color-primary-400: #ffc21a;
+  --app-color-primary-500: #ffae00;
+  --app-color-primary-600: #e69700;
+  --app-color-primary-700: #b87500;
+  --app-color-primary-800: #8f5c00;
+  --app-color-primary-900: #714900;
+  --app-color-primary-950: #412900;
+
+  --app-color-accent: #ffd335;
+  --app-color-neutral-dark: #333333;
+  --app-color-on-primary: #333333;
+
+  --app-font-family: "Poppins", sans-serif;
+}

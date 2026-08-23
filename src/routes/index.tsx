@@ -1,0 +1,151 @@
+import type { ReactNode } from "react";
+import { Navigate, useRoutes } from "react-router";
+import AppLayout from "../layout/AppLayout";
+import AuthGuard from "../guards/AuthGuard";
+import GuestGuard from "../guards/GuestGuard";
+import PermissionGuard from "../guards/PermissionGuard";
+import SignIn from "../pages/auth/Login";
+import Home from "../pages/Dashboard/home/HomeDashboard";
+import NotFound from "../pages/errorPages/Page404";
+import Unauthorized from "../pages/errorPages/PermissionRequired";
+import ModulePlaceholder from "../pages/Dashboard/components/ModulePlaceholder";
+import UserList from "../pages/Dashboard/userManagement/UserList";
+import UserProfiles from "../pages/Dashboard/settings/UserProfile";
+import Calendar from "../pages/Dashboard/demo/Calendar";
+import Blank from "../pages/Dashboard/demo/Blank";
+import FormElements from "../pages/Dashboard/demo/FormElements";
+import BasicTables from "../pages/Dashboard/demo/BasicTables";
+import Alerts from "../pages/Dashboard/demo/Alerts";
+import Avatars from "../pages/Dashboard/demo/Avatars";
+import Badges from "../pages/Dashboard/demo/Badges";
+import Buttons from "../pages/Dashboard/demo/Buttons";
+import Images from "../pages/Dashboard/demo/Images";
+import Videos from "../pages/Dashboard/demo/Videos";
+import LineChart from "../pages/Dashboard/demo/LineChart";
+import BarChart from "../pages/Dashboard/demo/BarChart";
+import { PATH_AUTH, PATH_DASHBOARD, PATH_PAGE, getRoutePermissions } from "./paths";
+
+const withPermission = (route: string, element: ReactNode) => (
+  <PermissionGuard permissions={getRoutePermissions(route)}>{element}</PermissionGuard>
+);
+
+const placeholder = (route: string, section: string, title: string, description: string) =>
+  withPermission(route, <ModulePlaceholder description={description} section={section} title={title} />);
+
+export default function Router() {
+  return useRoutes([
+    {
+      path: PATH_AUTH.root,
+      children: [
+        {
+          path: "login",
+          element: <GuestGuard><SignIn /></GuestGuard>,
+        },
+      ],
+    },
+    {
+      path: PATH_DASHBOARD.root,
+      element: <AuthGuard><AppLayout /></AuthGuard>,
+      children: [
+        { index: true, element: <Navigate replace to={PATH_DASHBOARD.dashboard.root} /> },
+        { path: "home", element: withPermission(PATH_DASHBOARD.dashboard.root, <Home />) },
+        {
+          path: "pos",
+          children: [
+            { path: "new-sale", element: placeholder(PATH_DASHBOARD.pos.newSale, "Point of Sale", "New Sale", "Create and process a new customer sale.") },
+            { path: "sales", element: placeholder(PATH_DASHBOARD.pos.sales, "Point of Sale", "Sales List", "Review completed and ongoing sales transactions.") },
+            { path: "returns", element: placeholder(PATH_DASHBOARD.pos.returns, "Point of Sale", "Sale Returns", "Review and manage returned sale items.") },
+            { path: "refunds", element: placeholder(PATH_DASHBOARD.pos.refunds, "Point of Sale", "Refunds", "Review and manage customer refunds.") },
+          ],
+        },
+        {
+          path: "customers",
+          children: [
+            { path: "list", element: placeholder(PATH_DASHBOARD.customers.list, "Customers", "Customer List", "View and manage customer records.") },
+          ],
+        },
+        {
+          path: "products",
+          children: [
+            { path: "list", element: placeholder(PATH_DASHBOARD.products.list, "Products", "Product List", "View and manage the Mobee product catalogue.") },
+            { path: "categories", element: placeholder(PATH_DASHBOARD.products.categories, "Products", "Categories", "Organize products into manageable categories.") },
+            { path: "attributes", element: placeholder(PATH_DASHBOARD.products.attributes, "Products", "Attributes", "Manage product attributes and their available options.") },
+          ],
+        },
+        {
+          path: "inventory",
+          children: [
+            { path: "overview", element: placeholder(PATH_DASHBOARD.inventory.overview, "Inventory", "Stock Overview", "Monitor current stock availability across locations.") },
+            { path: "adjustments", element: placeholder(PATH_DASHBOARD.inventory.adjustments, "Inventory", "Stock Adjustments", "Review and manage stock correction records.") },
+            { path: "transfers", element: placeholder(PATH_DASHBOARD.inventory.transfers, "Inventory", "Stock Transfers", "Track stock movements between Mobee locations.") },
+            { path: "logs", element: placeholder(PATH_DASHBOARD.inventory.logs, "Inventory", "Stock Logs", "Inspect the complete history of inventory movements.") },
+          ],
+        },
+        {
+          path: "purchasing",
+          children: [
+            { path: "suppliers", element: placeholder(PATH_DASHBOARD.purchasing.suppliers, "Purchasing", "Suppliers", "View and manage supplier information.") },
+            { path: "orders", element: placeholder(PATH_DASHBOARD.purchasing.orders, "Purchasing", "Purchase Orders", "Review and manage purchase orders.") },
+            { path: "goods-received-notes", element: placeholder(PATH_DASHBOARD.purchasing.goodsReceivedNotes, "Purchasing", "Goods Received Notes", "Track goods received against purchase orders.") },
+            { path: "returns", element: placeholder(PATH_DASHBOARD.purchasing.returns, "Purchasing", "Purchase Returns", "Review inventory returned to suppliers.") },
+            { path: "invoices", element: placeholder(PATH_DASHBOARD.purchasing.invoices, "Purchasing", "Supplier Invoices", "Review invoices received from suppliers.") },
+            { path: "payments", element: placeholder(PATH_DASHBOARD.purchasing.payments, "Purchasing", "Supplier Payments", "Track payments made to suppliers.") },
+          ],
+        },
+        {
+          path: "repairs",
+          children: [
+            { path: "jobs", element: placeholder(PATH_DASHBOARD.repairs.jobs, "Repairs", "Repair Jobs", "View and manage customer repair jobs.") },
+            { path: "payments", element: placeholder(PATH_DASHBOARD.repairs.payments, "Repairs", "Repair Payments", "Track payments related to repair jobs.") },
+          ],
+        },
+        {
+          path: "reports",
+          children: [
+            { path: "sales", element: placeholder(PATH_DASHBOARD.reports.sales, "Reports", "Sales Report", "Analyze sales performance and transaction trends.") },
+            { path: "inventory", element: placeholder(PATH_DASHBOARD.reports.inventory, "Reports", "Inventory Report", "Analyze stock levels and inventory movements.") },
+            { path: "purchasing", element: placeholder(PATH_DASHBOARD.reports.purchasing, "Reports", "Purchasing Report", "Analyze supplier and purchasing activity.") },
+            { path: "repairs", element: placeholder(PATH_DASHBOARD.reports.repairs, "Reports", "Repair Report", "Analyze repair volume, status, and revenue.") },
+          ],
+        },
+        {
+          path: "user-management",
+          children: [
+            { path: "users", element: withPermission(PATH_DASHBOARD.userManagement.users, <UserList />) },
+            { path: "roles", element: placeholder(PATH_DASHBOARD.userManagement.roles, "User Management", "Roles", "View and manage system roles.") },
+            { path: "role-permissions", element: placeholder(PATH_DASHBOARD.userManagement.rolePermissions, "User Management", "Role Permissions", "Review permissions assigned to each role.") },
+          ],
+        },
+        {
+          path: "settings",
+          children: [
+            { path: "locations", element: placeholder(PATH_DASHBOARD.settings.locations, "Settings", "Locations", "View and manage Mobee business locations.") },
+            { path: "document-sequences", element: placeholder(PATH_DASHBOARD.settings.documentSequences, "Settings", "Document Sequences", "Configure numbering sequences for business documents.") },
+            { path: "profile", element: withPermission(PATH_DASHBOARD.settings.profile, <UserProfiles />) },
+          ],
+        },
+        {
+          path: "demo",
+          children: [
+            { path: "calendar", element: withPermission(PATH_DASHBOARD.demo.calendar, <Calendar />) },
+            { path: "blank", element: withPermission(PATH_DASHBOARD.demo.blank, <Blank />) },
+            { path: "form-elements", element: withPermission(PATH_DASHBOARD.demo.formElements, <FormElements />) },
+            { path: "basic-tables", element: withPermission(PATH_DASHBOARD.demo.basicTables, <BasicTables />) },
+            { path: "alerts", element: withPermission(PATH_DASHBOARD.demo.alerts, <Alerts />) },
+            { path: "avatars", element: withPermission(PATH_DASHBOARD.demo.avatars, <Avatars />) },
+            { path: "badges", element: withPermission(PATH_DASHBOARD.demo.badges, <Badges />) },
+            { path: "buttons", element: withPermission(PATH_DASHBOARD.demo.buttons, <Buttons />) },
+            { path: "images", element: withPermission(PATH_DASHBOARD.demo.images, <Images />) },
+            { path: "videos", element: withPermission(PATH_DASHBOARD.demo.videos, <Videos />) },
+            { path: "line-chart", element: withPermission(PATH_DASHBOARD.demo.lineChart, <LineChart />) },
+            { path: "bar-chart", element: withPermission(PATH_DASHBOARD.demo.barChart, <BarChart />) },
+          ],
+        },
+      ],
+    },
+    { path: PATH_PAGE.unauthorized, element: <AuthGuard><Unauthorized /></AuthGuard> },
+    { path: PATH_PAGE.notFound, element: <NotFound /> },
+    { path: "/", element: <Navigate replace to={PATH_AUTH.login} /> },
+    { path: "*", element: <Navigate replace to={PATH_PAGE.notFound} /> },
+  ]);
+}

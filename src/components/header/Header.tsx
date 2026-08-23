@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { ThemeToggleButton } from "../common/ThemeToggleButton";
+import BrandLogo from "../common/BrandLogo";
 import NotificationDropdown from "./NotificationDropdown";
 import UserDropdown from "./UserDropdown";
 import { Link } from "react-router";
+import { PATH_DASHBOARD } from "../../routes/paths";
 
 // Define the interface for the props
 interface HeaderProps {
@@ -78,17 +80,8 @@ const Header: React.FC<HeaderProps> = ({ onClick, onToggle }) => {
             </svg>
           </button>
 
-          <Link to="/" className="lg:hidden">
-            <img
-              className="dark:hidden"
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
-            <img
-              className="hidden dark:block"
-              src="./images/logo/logo-dark.svg"
-              alt="Logo"
-            />
+          <Link to={PATH_DASHBOARD.dashboard.root} className="lg:hidden">
+            <BrandLogo className="max-w-[150px]" />
           </Link>
 
           <button

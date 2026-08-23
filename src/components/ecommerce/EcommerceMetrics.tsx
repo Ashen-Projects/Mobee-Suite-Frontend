@@ -1,59 +1,19 @@
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  BoxIconLine,
-  GroupIcon,
-} from "../../icons";
-import Badge from "../ui/badge/Badge";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import TrendingDownRoundedIcon from "@mui/icons-material/TrendingDownRounded";
+import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
+import { Box, Card, CardContent, Chip, Grid, Stack, Typography } from "@mui/material";
+
+const metrics = [
+  { label: "Customers", value: "3,782", change: "11.01%", positive: true, icon: <PeopleAltOutlinedIcon /> },
+  { label: "Orders", value: "5,359", change: "9.05%", positive: false, icon: <Inventory2OutlinedIcon /> },
+];
 
 export default function EcommerceMetrics() {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
-      {/* <!-- Metric Item Start --> */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <GroupIcon className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Customers
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              3,782
-            </h4>
-          </div>
-          <Badge color="success">
-            <ArrowUpIcon />
-            11.01%
-          </Badge>
-        </div>
-      </div>
-      {/* <!-- Metric Item End --> */}
-
-      {/* <!-- Metric Item Start --> */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-        <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl dark:bg-gray-800">
-          <BoxIconLine className="text-gray-800 size-6 dark:text-white/90" />
-        </div>
-        <div className="flex items-end justify-between mt-5">
-          <div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Orders
-            </span>
-            <h4 className="mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-              5,359
-            </h4>
-          </div>
-
-          <Badge color="error">
-            <ArrowDownIcon />
-            9.05%
-          </Badge>
-        </div>
-      </div>
-      {/* <!-- Metric Item End --> */}
-    </div>
-  );
+  return <Grid container spacing={2}>{metrics.map((metric) => (
+    <Grid key={metric.label} size={{ xs: 12, sm: 6 }}><Card sx={{ height: "100%" }}><CardContent sx={{ p: 3, "&:last-child": { pb: 3 } }}>
+      <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={2}><Box><Typography color="text.secondary" variant="body2">{metric.label}</Typography><Typography mt={0.5} variant="h4">{metric.value}</Typography></Box><Box sx={{ alignItems: "center", bgcolor: "action.hover", borderRadius: 2.5, display: "flex", height: 48, justifyContent: "center", width: 48 }}>{metric.icon}</Box></Stack>
+      <Chip color={metric.positive ? "success" : "error"} icon={metric.positive ? <TrendingUpRoundedIcon /> : <TrendingDownRoundedIcon />} label={`${metric.change} from last month`} size="small" sx={{ mt: 2 }} variant="outlined" />
+    </CardContent></Card></Grid>
+  ))}</Grid>;
 }

@@ -1,16 +1,18 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { Box, useTheme } from "@mui/material";
 
 export default function LineChartOne() {
+  const theme = useTheme();
   const options: ApexOptions = {
     legend: {
       show: false, // Hide legend
       position: "top",
       horizontalAlign: "left",
     },
-    colors: ["#465FFF", "#9CB9FF"], // Define line colors
+    colors: [theme.palette.primary.main, theme.palette.primary.light],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: "Poppins, sans-serif",
       height: 310,
       type: "line", // Set the chart type to 'line'
       toolbar: {
@@ -38,6 +40,7 @@ export default function LineChartOne() {
       },
     },
     grid: {
+      borderColor: theme.palette.divider,
       xaxis: {
         lines: {
           show: false, // Hide grid lines on x-axis
@@ -53,6 +56,7 @@ export default function LineChartOne() {
       enabled: false, // Disable data labels
     },
     tooltip: {
+      theme: theme.palette.mode,
       enabled: true, // Enable tooltip
       x: {
         format: "dd MMM yyyy", // Format for x-axis tooltip
@@ -88,7 +92,7 @@ export default function LineChartOne() {
       labels: {
         style: {
           fontSize: "12px", // Adjust font size for y-axis labels
-          colors: ["#6B7280"], // Color of the labels
+          colors: [theme.palette.text.secondary],
         },
       },
       title: {
@@ -111,10 +115,10 @@ export default function LineChartOne() {
     },
   ];
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartEight" className="min-w-[1000px]">
+    <Box sx={{ maxWidth: "100%", overflowX: "auto" }}>
+      <Box id="chartEight" sx={{ minWidth: { xs: 760, lg: 0 } }}>
         <Chart options={options} series={series} type="area" height={310} />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

@@ -1,58 +1,48 @@
-"use client";
-
+import { CssBaseline, ThemeProvider as MuiThemeProvider } from "@mui/material";
+import type { PaletteMode } from "@mui/material";
 import type React from "react";
-import { createContext, useState, useContext, useEffect } from "react";
-
-type Theme = "light" | "dark";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createMobeeTheme } from "../theme";
 
 type ThemeContextType = {
-  theme: Theme;
+  theme: PaletteMode;
   toggleTheme: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [isInitialized, setIsInitialized] = useState(false);
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+  const [theme, setTheme] = useState<PaletteMode>(() => {
+    const savedTheme = window.localStorage.getItem("theme");
+    return savedTheme === "dark" ? "dark" : "light";
+  });
+  const muiTheme = useMemo(() => createMobeeTheme(theme), [theme]);
 
   useEffect(() => {
-    // This code will only run on the client side
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
-    const initialTheme = savedTheme || "light"; // Default to light theme
+    window.localStorage.setItem("theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
 
-    setTheme(initialTheme);
-    setIsInitialized(true);
-  }, []);
-
-  useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem("theme", theme);
-      if (theme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  }, [theme, isInitialized]);
-
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
-  };
+  const value = useMemo(
+    () => ({
+      theme,
+      toggleTheme: () => setTheme((current) => (current === "light" ? "dark" : "light")),
+    }),
+    [theme],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+    <ThemeContext.Provider value={value}>
+      <MuiThemeProvider theme={muiTheme}>
+        <CssBaseline />
+        {children}
+      </MuiThemeProvider>
     </ThemeContext.Provider>
   );
 };
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
+  if (!context) throw new Error("useTheme must be used within a ThemeProvider");
   return context;
 };

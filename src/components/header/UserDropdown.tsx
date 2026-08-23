@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { Link } from "react-router";
+import { PATH_AUTH } from "../../routes/paths";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -136,7 +137,7 @@ export default function UserDropdown() {
           </li>
         </ul>
         <Link
-          to="/signin"
+          to={PATH_AUTH.login}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg

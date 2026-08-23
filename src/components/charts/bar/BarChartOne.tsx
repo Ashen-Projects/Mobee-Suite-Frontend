@@ -1,11 +1,13 @@
 import Chart from "react-apexcharts";
 import { ApexOptions } from "apexcharts";
+import { Box, useTheme } from "@mui/material";
 
 export default function BarChartOne() {
+  const theme = useTheme();
   const options: ApexOptions = {
-    colors: ["#465fff"],
+    colors: [theme.palette.primary.main],
     chart: {
-      fontFamily: "Outfit, sans-serif",
+      fontFamily: "Poppins, sans-serif",
       type: "bar",
       height: 180,
       toolbar: {
@@ -54,7 +56,7 @@ export default function BarChartOne() {
       show: true,
       position: "top",
       horizontalAlign: "left",
-      fontFamily: "Outfit",
+      fontFamily: "Poppins",
     },
     yaxis: {
       title: {
@@ -62,6 +64,7 @@ export default function BarChartOne() {
       },
     },
     grid: {
+      borderColor: theme.palette.divider,
       yaxis: {
         lines: {
           show: true,
@@ -73,6 +76,7 @@ export default function BarChartOne() {
     },
 
     tooltip: {
+      theme: theme.palette.mode,
       x: {
         show: false,
       },
@@ -88,10 +92,10 @@ export default function BarChartOne() {
     },
   ];
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartOne" className="min-w-[1000px]">
+    <Box sx={{ maxWidth: "100%", overflowX: "auto" }}>
+      <Box id="chartOne" sx={{ minWidth: { xs: 760, lg: 0 } }}>
         <Chart options={options} series={series} type="bar" height={180} />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

@@ -1,5 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap")
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap")
 layer(base);
+@import "./theme/tokens.css";
 
 @import "tailwindcss";
 
@@ -7,7 +8,8 @@ layer(base);
 
 @theme {
   --font-*: initial;
-  --font-outfit: Outfit, sans-serif;
+  --font-poppins: var(--app-font-family);
+  --font-outfit: var(--app-font-family);
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -39,20 +41,22 @@ layer(base);
   --color-current: currentColor;
   --color-transparent: transparent;
   --color-white: #ffffff;
-  --color-black: #101828;
+  --color-black: var(--app-color-neutral-dark);
 
-  --color-brand-25: #f2f7ff;
-  --color-brand-50: #ecf3ff;
-  --color-brand-100: #dde9ff;
-  --color-brand-200: #c2d6ff;
-  --color-brand-300: #9cb9ff;
-  --color-brand-400: #7592ff;
-  --color-brand-500: #465fff;
-  --color-brand-600: #3641f5;
-  --color-brand-700: #2a31d8;
-  --color-brand-800: #252dae;
-  --color-brand-900: #262e89;
-  --color-brand-950: #161950;
+  --color-brand-25: var(--app-color-primary-25);
+  --color-brand-50: var(--app-color-primary-50);
+  --color-brand-100: var(--app-color-primary-100);
+  --color-brand-200: var(--app-color-primary-200);
+  --color-brand-300: var(--app-color-primary-300);
+  --color-brand-400: var(--app-color-primary-400);
+  --color-brand-500: var(--app-color-primary-500);
+  --color-brand-600: var(--app-color-primary-600);
+  --color-brand-700: var(--app-color-primary-700);
+  --color-brand-800: var(--app-color-primary-800);
+  --color-brand-900: var(--app-color-primary-900);
+  --color-brand-950: var(--app-color-primary-950);
+  --color-brand-accent: var(--app-color-accent);
+  --color-brand-contrast: var(--app-color-on-primary);
 
   --color-blue-light-25: #f5fbff;
   --color-blue-light-50: #f0f9ff;
@@ -77,7 +81,7 @@ layer(base);
   --color-gray-600: #475467;
   --color-gray-700: #344054;
   --color-gray-800: #1d2939;
-  --color-gray-900: #101828;
+  --color-gray-900: var(--app-color-neutral-dark);
   --color-gray-950: #0c111d;
   --color-gray-dark: #1a2231;
 
@@ -186,7 +190,7 @@ layer(base);
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-normal font-poppins z-1 bg-gray-50;
   }
 }
 
@@ -523,13 +527,13 @@ span.flatpickr-weekday,
 .flatpickr-day.selected.nextMonthDay,
 .flatpickr-day.startRange.nextMonthDay,
 .flatpickr-day.endRange.nextMonthDay {
-  background: #465fff;
+  background: var(--app-color-primary-500);
   @apply !border-brand-500 !bg-brand-500 hover:!border-brand-500 hover:!bg-brand-500;
 }
 .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
 .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
-  box-shadow: -10px 0 0 #465fff;
+  box-shadow: -10px 0 0 var(--app-color-primary-500);
 }
 
 .flatpickr-months .flatpickr-prev-month svg,
