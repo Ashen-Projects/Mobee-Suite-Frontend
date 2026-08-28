@@ -5,11 +5,17 @@ import AuthGuard from "../guards/AuthGuard";
 import GuestGuard from "../guards/GuestGuard";
 import PermissionGuard from "../guards/PermissionGuard";
 import SignIn from "../pages/auth/Login";
+import PendingAccount from "../pages/auth/PendingAccount";
 import Home from "../pages/Dashboard/home/HomeDashboard";
 import NotFound from "../pages/errorPages/Page404";
 import Unauthorized from "../pages/errorPages/PermissionRequired";
 import ModulePlaceholder from "../pages/Dashboard/components/ModulePlaceholder";
 import UserList from "../pages/Dashboard/userManagement/UserList";
+import Roles from "../pages/Dashboard/userManagement/Roles";
+import ProductList from "../pages/Dashboard/products/ProductList";
+import Categories from "../pages/Dashboard/products/Categories";
+import Attributes from "../pages/Dashboard/products/Attributes";
+import Suppliers from "../pages/Dashboard/purchasing/Suppliers";
 import UserProfiles from "../pages/Dashboard/settings/UserProfile";
 import Calendar from "../pages/Dashboard/demo/Calendar";
 import Blank from "../pages/Dashboard/demo/Blank";
@@ -67,9 +73,9 @@ export default function Router() {
         {
           path: "products",
           children: [
-            { path: "list", element: placeholder(PATH_DASHBOARD.products.list, "Products", "Product List", "View and manage the Mobee product catalogue.") },
-            { path: "categories", element: placeholder(PATH_DASHBOARD.products.categories, "Products", "Categories", "Organize products into manageable categories.") },
-            { path: "attributes", element: placeholder(PATH_DASHBOARD.products.attributes, "Products", "Attributes", "Manage product attributes and their available options.") },
+            { path: "list", element: withPermission(PATH_DASHBOARD.products.list, <ProductList />) },
+            { path: "categories", element: withPermission(PATH_DASHBOARD.products.categories, <Categories />) },
+            { path: "attributes", element: withPermission(PATH_DASHBOARD.products.attributes, <Attributes />) },
           ],
         },
         {
@@ -84,7 +90,7 @@ export default function Router() {
         {
           path: "purchasing",
           children: [
-            { path: "suppliers", element: placeholder(PATH_DASHBOARD.purchasing.suppliers, "Purchasing", "Suppliers", "View and manage supplier information.") },
+            { path: "suppliers", element: withPermission(PATH_DASHBOARD.purchasing.suppliers, <Suppliers />) },
             { path: "orders", element: placeholder(PATH_DASHBOARD.purchasing.orders, "Purchasing", "Purchase Orders", "Review and manage purchase orders.") },
             { path: "goods-received-notes", element: placeholder(PATH_DASHBOARD.purchasing.goodsReceivedNotes, "Purchasing", "Goods Received Notes", "Track goods received against purchase orders.") },
             { path: "returns", element: placeholder(PATH_DASHBOARD.purchasing.returns, "Purchasing", "Purchase Returns", "Review inventory returned to suppliers.") },
@@ -112,8 +118,7 @@ export default function Router() {
           path: "user-management",
           children: [
             { path: "users", element: withPermission(PATH_DASHBOARD.userManagement.users, <UserList />) },
-            { path: "roles", element: placeholder(PATH_DASHBOARD.userManagement.roles, "User Management", "Roles", "View and manage system roles.") },
-            { path: "role-permissions", element: placeholder(PATH_DASHBOARD.userManagement.rolePermissions, "User Management", "Role Permissions", "Review permissions assigned to each role.") },
+            { path: "roles", element: withPermission(PATH_DASHBOARD.userManagement.roles, <Roles />) },
           ],
         },
         {
@@ -143,6 +148,7 @@ export default function Router() {
         },
       ],
     },
+    { path: PATH_PAGE.pending, element: <AuthGuard><PendingAccount /></AuthGuard> },
     { path: PATH_PAGE.unauthorized, element: <AuthGuard><Unauthorized /></AuthGuard> },
     { path: PATH_PAGE.notFound, element: <NotFound /> },
     { path: "/", element: <Navigate replace to={PATH_AUTH.login} /> },

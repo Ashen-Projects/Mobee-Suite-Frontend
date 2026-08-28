@@ -91,8 +91,7 @@ export const navItems: NavItem[] = [
     name: "User Management",
     subItems: [
       { name: "User List", path: PATH_DASHBOARD.userManagement.users },
-      { name: "Roles", path: PATH_DASHBOARD.userManagement.roles },
-      { name: "Role Permissions", path: PATH_DASHBOARD.userManagement.rolePermissions },
+      { name: "Roles & Permissions", path: PATH_DASHBOARD.userManagement.roles },
     ],
   },
   {

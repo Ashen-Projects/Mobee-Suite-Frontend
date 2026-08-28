@@ -9,6 +9,7 @@ import { AppBar, Avatar, Badge, Box, Button, Divider, IconButton, ListItemIcon, 
 import { MouseEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import BrandLogo from "../components/common/BrandLogo";
+import LogoutConfirmationDialog from "../components/common/LogoutConfirmationDialog";
 import { useTheme } from "../context/ThemeContext";
 import { useSidebar } from "../context/SidebarContext";
 import useAuth from "../hooks/useAuth";
@@ -27,13 +28,18 @@ export default function AppHeader() {
   const navigate = useNavigate();
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
   const [navMenu, setNavMenu] = useState<NavMenuState>(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const openNavMenu = (event: MouseEvent<HTMLElement>, item: NavItem) => setNavMenu({ anchor: event.currentTarget, item });
   const closeNavMenu = () => setNavMenu(null);
   const handleLogout = async () => {
-    setAccountAnchor(null);
-    await logout();
-    navigate(PATH_AUTH.login, { replace: true });
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      setLogoutDialogOpen(false);
+      navigate(PATH_AUTH.login, { replace: true });
+    } finally { setIsLoggingOut(false); }
   };
 
   return <AppBar color="transparent" elevation={0} position="fixed" sx={{ bgcolor: "transparent", pointerEvents: "none", px: { xs: 1, sm: 2 }, pt: { xs: 1, sm: 1.5 }, width: "100%", zIndex: (value) => value.zIndex.drawer + 1 }}>
@@ -77,7 +83,8 @@ export default function AppHeader() {
     <Menu anchorEl={accountAnchor} onClose={() => setAccountAnchor(null)} open={Boolean(accountAnchor)} slotProps={{ paper: { sx: { minWidth: 190, mt: 1 } } }}>
       <MenuItem component={Link} onClick={() => setAccountAnchor(null)} to={PATH_DASHBOARD.settings.profile}><ListItemIcon><PersonOutlineIcon fontSize="small" /></ListItemIcon>My Profile</MenuItem>
       <Divider />
-      <MenuItem onClick={() => void handleLogout()}><ListItemIcon><LogoutOutlinedIcon fontSize="small" /></ListItemIcon>Logout</MenuItem>
+      <MenuItem onClick={() => { setAccountAnchor(null); setLogoutDialogOpen(true); }}><ListItemIcon><LogoutOutlinedIcon fontSize="small" /></ListItemIcon>Logout</MenuItem>
     </Menu>
+    <LogoutConfirmationDialog isLoggingOut={isLoggingOut} onCancel={() => setLogoutDialogOpen(false)} onConfirm={() => void handleLogout()} open={logoutDialogOpen} />
   </AppBar>;
 }

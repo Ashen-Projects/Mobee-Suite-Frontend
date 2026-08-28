@@ -15,13 +15,20 @@ const MINIMUM_LOADER_DURATION_MS = 400;
 
 export class ApiError extends Error {
   readonly details?: unknown;
+  readonly retryAfterSeconds?: number;
   readonly status?: number;
 
-  constructor(message: string, status?: number, details?: unknown) {
+  constructor(
+    message: string,
+    status?: number,
+    details?: unknown,
+    retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.details = details;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -72,12 +79,18 @@ apiClient.interceptors.response.use(
       (error.code === "ECONNABORTED"
         ? "The request timed out."
         : "Unable to communicate with the server.");
+    const retryAfterHeader = error.response?.headers["retry-after"];
+    const parsedRetryAfter = Number.parseInt(String(retryAfterHeader ?? ""), 10);
+    const retryAfterSeconds = Number.isFinite(parsedRetryAfter)
+      ? parsedRetryAfter
+      : undefined;
 
     return Promise.reject(
       new ApiError(
         message,
         error.response?.status,
         error.response?.data?.errors,
+        retryAfterSeconds,
       ),
     );
   },

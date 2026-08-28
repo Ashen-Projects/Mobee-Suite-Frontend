@@ -6,8 +6,8 @@ type BrandLogoProps = { compact?: boolean; className?: string; sx?: SxProps<Them
 export default function BrandLogo({ compact = false, sx }: BrandLogoProps) {
   const { theme } = useTheme();
   const source = theme === "dark"
-    ? "https://res.cloudinary.com/gxsancbf/image/upload/v1787321325/mobee-suite-3.png"
-    : "https://res.cloudinary.com/gxsancbf/image/upload/v1787321325/Mobee-suite.png";
+    ? "https://res.cloudinary.com/gxsancbf/image/upload/v1787844244/mobee-suite-3.png"
+    : "https://res.cloudinary.com/gxsancbf/image/upload/v1787844231/Mobee-suite.png";
 
   return (
     <Box

@@ -1,19 +1,41 @@
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import { Box, Container, Paper, Typography } from "@mui/material";
+import { Box, Container, Typography } from "@mui/material";
+import accessDeniedIllustration from "../../assets/undraw_access-denied_krem.svg";
 import PageMeta from "../../components/common/PageMeta";
+import useAuth from "../../hooks/useAuth";
+import { USER_ROLES } from "../../utils/constants";
 
 export default function PermissionRequired() {
+  const { hasRole } = useAuth();
+  const isPendingUser = hasRole(USER_ROLES.PENDING);
+  const title = isPendingUser ? "Access Pending" : "Permission Required";
   return (
     <>
-      <PageMeta description="Permission is required to access this page." title="Permission Required | Mobee Suite" />
+      <PageMeta description="Permission is required to access this page." title={`${title} | Mobee Suite`} />
       <Container maxWidth="sm" sx={{ alignItems: "center", display: "flex", minHeight: "calc(100vh - 150px)", py: 5 }}>
         <Box sx={{ textAlign: "center", width: "100%" }}>
-          <Paper elevation={0} sx={{ alignItems: "center", bgcolor: "primary.main", borderRadius: "50%", color: "primary.contrastText", display: "flex", height: { xs: 150, sm: 220 }, justifyContent: "center", mx: "auto", width: { xs: 150, sm: 220 } }}>
-            <LockOutlinedIcon sx={{ fontSize: { xs: 70, sm: 100 } }} />
-          </Paper>
-          <Typography sx={{ mt: 4 }} variant="h3">Permission Required</Typography>
-          <Typography color="text.secondary" sx={{ mt: 2 }}>Oops. Looks like you don&apos;t have permission to access this page.</Typography>
-          <Typography color="text.secondary" variant="body2">Please contact an administrator if you need access.</Typography>
+          <Box
+            alt="Access denied"
+            component="img"
+            src={accessDeniedIllustration}
+            sx={{
+              display: "block",
+              height: "auto",
+              maxHeight: { xs: 220, sm: 300 },
+              maxWidth: "100%",
+              mx: "auto",
+              objectFit: "contain",
+              width: { xs: 260, sm: 380 },
+            }}
+          />
+          <Typography sx={{ mt: 4 }} variant="h3">{title}</Typography>
+          <Typography color="text.secondary" sx={{ mt: 2 }}>
+            {isPendingUser
+              ? "Your account is ready, but an administrator has not assigned your working role yet."
+              : "Oops. Looks like you don't have permission to access this page."}
+          </Typography>
+          <Typography color="text.secondary" variant="body2">
+            {isPendingUser ? "Please contact your administrator to request access." : "Please contact an administrator if you need access."}
+          </Typography>
         </Box>
       </Container>
     </>
