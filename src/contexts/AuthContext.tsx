@@ -9,6 +9,7 @@ import {
 import { BASE_URL } from "../config";
 import { get, post } from "../inteceptor";
 import { accessVerify } from "../utils/common";
+import { USER_ROLES } from "../utils/constants";
 
 export type AuthStatus = "authenticated" | "loading" | "unauthenticated";
 
@@ -23,6 +24,7 @@ export type AuthUser = {
   displayName: string;
   email: string | null;
   id: number;
+  isPending: boolean;
   permissions: string[];
   roles: AuthRole[];
   username: string;
@@ -117,10 +119,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const permissionSet = new Set(user?.permissions ?? []);
     const roleSet = new Set(user?.roles.map((role) => role.name) ?? []);
     const permissionList = [...permissionSet];
+    const isAdministrator = roleSet.has(USER_ROLES.ADMIN);
 
     return {
-      can: (permission) => accessVerify(permission, permissionList),
+      can: (permission) =>
+        isAdministrator || accessVerify(permission, permissionList),
       canAny: (permissions) =>
+        isAdministrator ||
         permissions.some((permission) =>
           accessVerify(permission, permissionList),
         ),

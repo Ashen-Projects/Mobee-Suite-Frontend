@@ -1,11 +1,9 @@
-import { TIME_ZONE, USER_ACCESS } from "./constants";
+import { TIME_ZONE } from "./constants";
 
 export const accessVerify = (
   code: string,
   permissionList: readonly string[] = [],
-): boolean =>
-  permissionList.includes(code) ||
-  permissionList.includes(USER_ACCESS.SUPER_ADMIN);
+): boolean => permissionList.includes(code);
 
 export const capitalize = (value: string): string => {
   const normalized = value.trim();

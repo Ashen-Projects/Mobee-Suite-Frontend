@@ -1,18 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { persistReducer, persistStore } from "redux-persist";
-import storage from "redux-persist/lib/storage";
 import { useDispatch, useSelector } from "react-redux";
 import type { TypedUseSelectorHook } from "react-redux";
-import { rootReducer } from "./rootReducer";
+import { rootPersistConfig, rootReducer } from "./rootReducer";
 
-const persistedReducer = persistReducer(
-  {
-    key: "mobee",
-    storage,
-    blacklist: ["loading"],
-  },
-  rootReducer,
-);
+const persistedReducer = persistReducer(rootPersistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
