@@ -25,37 +25,66 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
 
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy Frontend
         run: |
           ssh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" 'bash -s' <<'EOF'
-            set -e
+            set -Eeuo pipefail
 
             export PATH=/www/server/nodejs/v24.20.0/bin:$PATH
 
-            cd /www/projects/Mobee-Suite-Frontend
+            PROJECT_DIR="/www/projects/Mobee-Suite-Frontend"
+            WEB_DIR="/www/wwwroot/suite.mobee.lk"
 
-            echo "1. Updating source code..."
+            echo "========================================"
+            echo "1. Updating frontend source code"
+            echo "========================================"
+
+            cd "$PROJECT_DIR"
+
             git fetch origin main
             git reset --hard origin/main
 
-            echo "2. Installing dependencies..."
+            echo "========================================"
+            echo "2. Installing dependencies"
+            echo "========================================"
+
             npm ci
 
-            echo "3. Building production frontend..."
+            echo "========================================"
+            echo "3. Building production frontend"
+            echo "========================================"
+
             npm run build
 
-            echo "4. Publishing website..."
+            echo "========================================"
+            echo "4. Checking build output"
+            echo "========================================"
+
+            test -f dist/index.html
+
+            echo "========================================"
+            echo "5. Publishing frontend"
+            echo "========================================"
+
             rsync -a \
               --delete \
+              --chown=www:www \
               --exclude='.well-known/' \
+              --exclude='.user.ini' \
+              --exclude='.htaccess' \
               dist/ \
-              /www/wwwroot/suite.mobee.lk/
+              "$WEB_DIR/"
 
-            chown -R www:www /www/wwwroot/suite.mobee.lk
+            echo "========================================"
+            echo "6. Testing production website"
+            echo "========================================"
 
-            echo "5. Testing website..."
-            curl -fsS https://suite.mobee.lk > /dev/null
+            curl -fsS https://suite.mobee.lk/ > /dev/null
 
-            echo "Frontend deployed successfully"
+            echo ""
+            echo "========================================"
+            echo "Frontend deployment successful"
+            echo "========================================"
           EOF
