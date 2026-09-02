@@ -51,6 +51,7 @@ export const navItems: NavItem[] = [
     name: "Inventory",
     subItems: [
       { name: "Stock Overview", path: PATH_DASHBOARD.inventory.overview },
+      { name: "Stock List", path: PATH_DASHBOARD.inventory.stocks },
       { name: "Stock Adjustments", path: PATH_DASHBOARD.inventory.adjustments },
       { name: "Stock Transfers", path: PATH_DASHBOARD.inventory.transfers },
       { name: "Stock Logs", path: PATH_DASHBOARD.inventory.logs },
@@ -62,7 +63,9 @@ export const navItems: NavItem[] = [
     subItems: [
       { name: "Suppliers", path: PATH_DASHBOARD.purchasing.suppliers },
       { name: "Purchase Orders", path: PATH_DASHBOARD.purchasing.orders },
-      { name: "Goods Received Notes", path: PATH_DASHBOARD.purchasing.goodsReceivedNotes },
+      { name: "Goods Received", path: PATH_DASHBOARD.purchasing.goodsReceivedNotes },
+      { name: "GRN Counts", path: PATH_DASHBOARD.purchasing.grnCounts },
+      { name: "GRN Final Approval", path: PATH_DASHBOARD.purchasing.grnFinalApproval },
       { name: "Purchase Returns", path: PATH_DASHBOARD.purchasing.returns },
       { name: "Supplier Invoices", path: PATH_DASHBOARD.purchasing.invoices },
       { name: "Supplier Payments", path: PATH_DASHBOARD.purchasing.payments },

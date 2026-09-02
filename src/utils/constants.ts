@@ -14,6 +14,12 @@ export const USER_ROLES = {
 
 export const USER_PERMISSIONS = {
   DASHBOARD_VIEW: "dashboard.view",
+  DOCUMENT_SEQUENCES_CREATE: "document_sequences.create",
+  DOCUMENT_SEQUENCES_UPDATE: "document_sequences.update",
+  DOCUMENT_SEQUENCES_VIEW: "document_sequences.view",
+  LOCATIONS_CREATE: "locations.create",
+  LOCATIONS_UPDATE: "locations.update",
+  LOCATIONS_VIEW: "locations.view",
   PERMISSIONS_CREATE: "permissions.create",
   PERMISSIONS_UPDATE: "permissions.update",
   PERMISSIONS_DELETE: "permissions.delete",
@@ -26,6 +32,19 @@ export const USER_PERMISSIONS = {
   PRODUCTS_CREATE: "products.create",
   PRODUCTS_UPDATE: "products.update",
   PRODUCTS_VIEW: "products.view",
+  PURCHASE_ORDERS_APPROVE: "purchase_orders.approve",
+  PURCHASE_ORDERS_CANCEL: "purchase_orders.cancel",
+  PURCHASE_ORDERS_CREATE: "purchase_orders.create",
+  PURCHASE_ORDERS_ORDER: "purchase_orders.order",
+  PURCHASE_ORDERS_SUBMIT: "purchase_orders.submit",
+  PURCHASE_ORDERS_UPDATE: "purchase_orders.update",
+  PURCHASE_ORDERS_VIEW: "purchase_orders.view",
+  GRNS_VIEW: "grns.view",
+  GRNS_CREATE: "grns.create",
+  GRNS_COUNT: "grns.count",
+  GRNS_FINANCE_APPROVE: "grns.finance_approve",
+  GRNS_STOCK_ADD: "grns.stock_add",
+  GRNS_DOCUMENTS: "grns.documents",
   ROLES_ASSIGN_PERMISSIONS: "roles.assign_permissions",
   ROLES_CREATE: "roles.create",
   ROLES_DELETE: "roles.delete",
@@ -40,6 +59,7 @@ export const USER_PERMISSIONS = {
   SUPPLIERS_CREATE: "suppliers.create",
   SUPPLIERS_UPDATE: "suppliers.update",
   SUPPLIERS_DELETE: "suppliers.delete",
+  STOCK_VIEW: "stock.view",
 } as const;
 
 export const COLOR_CODE = {
