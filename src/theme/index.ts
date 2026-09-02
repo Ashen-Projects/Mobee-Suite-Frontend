@@ -19,9 +19,13 @@ export const createMobeeTheme = (mode: PaletteMode) =>
     shape: { borderRadius: 8 },
     typography: {
       fontFamily: 'Poppins, "Helvetica Neue", Arial, sans-serif',
-      h4: { fontSize: "1.375rem", fontWeight: 700, lineHeight: 1.45 },
-      h5: { fontSize: "1.125rem", fontWeight: 700, lineHeight: 1.45 },
-      h6: { fontSize: "1rem", fontWeight: 600, lineHeight: 1.5 },
+      fontSize: 13,
+      body1: { fontSize: "0.875rem", lineHeight: 1.45 },
+      body2: { fontSize: "0.8125rem", lineHeight: 1.45 },
+      caption: { fontSize: "0.72rem", lineHeight: 1.35 },
+      h4: { fontSize: "1.25rem", fontWeight: 700, lineHeight: 1.4 },
+      h5: { fontSize: "1.05rem", fontWeight: 700, lineHeight: 1.4 },
+      h6: { fontSize: "0.95rem", fontWeight: 600, lineHeight: 1.45 },
       button: { fontWeight: 600, textTransform: "none" },
     },
     components: {
@@ -37,13 +41,26 @@ export const createMobeeTheme = (mode: PaletteMode) =>
           body: { minWidth: 320 },
           "*": { boxSizing: "border-box" },
           ".MuiDataGrid-root": { minHeight: "620px" },
+          ".MuiDataGrid-root:focus, .MuiDataGrid-root:focus-within": {
+            boxShadow: "none !important",
+            outline: "none !important",
+          },
           ".MuiDataGrid-root .MuiDataGrid-columnHeaders": {
             backgroundColor: mode === "light" ? "rgba(145, 158, 171, 0.08)" : "rgba(255, 255, 255, 0.05)",
             maxHeight: "48px !important",
             minHeight: "48px !important",
           },
-          ".MuiDataGrid-root .MuiDataGrid-columnHeaderTitle": { fontSize: 12.5, fontWeight: 700 },
-          ".MuiDataGrid-root .MuiDataGrid-cell": { alignItems: "center", fontSize: 13 },
+          ".MuiDataGrid-root .MuiDataGrid-columnHeaderTitle": { fontSize: 12, fontWeight: 700 },
+          ".MuiDataGrid-root .MuiDataGrid-cell": {
+            alignItems: "center !important",
+            display: "flex !important",
+            fontSize: 12.5,
+            lineHeight: 1.35,
+            whiteSpace: "nowrap",
+          },
+          ".MuiDataGrid-root .MuiDataGrid-columnSeparator": {
+            display: "none",
+          },
           ".MuiDataGrid-root .MuiDataGrid-row": {
             maxHeight: "52px !important",
             minHeight: "52px !important",
@@ -51,7 +68,13 @@ export const createMobeeTheme = (mode: PaletteMode) =>
           ".MuiDataGrid-root .MuiDataGrid-row:hover": {
             backgroundColor: mode === "light" ? "rgba(145, 158, 171, 0.08)" : "rgba(255, 255, 255, 0.05)",
           },
-          ".MuiDataGrid-root .MuiDataGrid-cell:focus, .MuiDataGrid-root .MuiDataGrid-cell:focus-within, .MuiDataGrid-root .MuiDataGrid-columnHeader:focus, .MuiDataGrid-root .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
+          ".MuiDataGrid-root .MuiDataGrid-row.Mui-selected, .MuiDataGrid-root .MuiDataGrid-row.Mui-selected:hover": {
+            backgroundColor: "transparent",
+          },
+          ".MuiDataGrid-root .MuiDataGrid-cell:focus, .MuiDataGrid-root .MuiDataGrid-cell:focus-within, .MuiDataGrid-root .MuiDataGrid-columnHeader:focus, .MuiDataGrid-root .MuiDataGrid-columnHeader:focus-within, .MuiDataGrid-root .MuiDataGrid-cell.MuiDataGrid-cell--editing": {
+            boxShadow: "none !important",
+            outline: "none !important",
+          },
           ".MuiDataGrid-root .MuiDataGrid-footerContainer": { minHeight: 52 },
           ".MuiDataGrid-virtualScroller": { minHeight: "470px" },
         },
@@ -60,7 +83,13 @@ export const createMobeeTheme = (mode: PaletteMode) =>
         styleOverrides: { paper: { backgroundImage: "none" } },
       },
       MuiTextField: {
-        defaultProps: { size: "small" },
+        defaultProps: { size: "small", type: "text" },
+        styleOverrides: {
+          root: {
+            "& input": { fontSize: "0.875rem" },
+            "& textarea": { fontSize: "0.875rem" },
+          },
+        },
       },
       MuiFormControl: {
         defaultProps: { size: "small" },

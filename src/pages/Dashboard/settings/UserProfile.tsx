@@ -58,7 +58,7 @@ export default function UserProfile() {
     <PageMeta description="View and update your Mobee Suite profile." title="My Profile | Mobee Suite" />
     <Stack spacing={3}>
       <Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
-        <Box><Typography variant="h4">My Profile</Typography><Typography color="text.secondary">Your account, assigned access, and location information.</Typography></Box>
+        <Typography variant="h4">My Profile</Typography>
         <Button disabled={!profile} onClick={openEdit} startIcon={<EditOutlinedIcon />} variant="contained">Edit Profile</Button>
       </Stack>
       <Card><CardContent sx={{ p: { xs: 2.5, sm: 4 } }}><Stack alignItems={{ xs: "flex-start", sm: "center" }} direction={{ xs: "column", sm: "row" }} spacing={2.5}><Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: 30, height: 80, width: 80 }}>{initial}</Avatar><Box flex={1}><Typography variant="h5">{profile?.displayName || user?.displayName || "Mobee user"}</Typography><Typography color="text.secondary">{profile?.email || user?.email || "Email not available"}</Typography><Stack direction="row" flexWrap="wrap" gap={1} mt={1.5}><Chip color="success" label="Active account" size="small" variant="outlined" />{user?.roles.map((role) => <Chip color="primary" key={role.id} label={role.label || role.name} size="small" />)}</Stack></Box></Stack></CardContent></Card>

@@ -39,6 +39,8 @@ export const USER_PERMISSIONS = {
   PURCHASE_ORDERS_SUBMIT: "purchase_orders.submit",
   PURCHASE_ORDERS_UPDATE: "purchase_orders.update",
   PURCHASE_ORDERS_VIEW: "purchase_orders.view",
+  SALES_CREATE: "sales.create",
+  SALES_VIEW: "sales.view",
   GRNS_VIEW: "grns.view",
   GRNS_CREATE: "grns.create",
   GRNS_COUNT: "grns.count",
