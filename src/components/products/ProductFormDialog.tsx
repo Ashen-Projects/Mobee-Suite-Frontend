@@ -3,12 +3,15 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DoNotDisturbOnOutlinedIcon from "@mui/icons-material/DoNotDisturbOnOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
-import { Box, Button, Card, Checkbox, Chip, Divider, FormControlLabel, IconButton, MenuItem, Stack, SwipeableDrawer, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
+import { Box, Button, Card, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, SwipeableDrawer, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "react-toastify";
 import { createProduct, updateProduct, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductImageInput, type ProductInput, type ProductListItem } from "../../redux/slices/productRedux/productRedux";
+import { exportBarTenderCsv, printBarcodes } from "../../utils/printBarcodes";
 
 type ProductKind = "simple" | "variable" | "variation";
 type FormImage = ProductImageInput & { clientId: string };
@@ -23,6 +26,7 @@ type Props = {
   parents: ProductListItem[];
   product: ProductDetail | null;
 };
+type PrintableBarcode = { barcode: string; productName: string | null; productSku: string | null };
 
 const emptyImages = (): FormImage[] => [];
 
@@ -54,6 +58,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
   const [saving, setSaving] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [variationDrafts, setVariationDrafts] = useState<Record<number, VariationDraft>>({});
+  const [createdBarcode, setCreatedBarcode] = useState<PrintableBarcode | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -121,8 +126,9 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       toast.error("Select every attribute required by the product category.");
       return;
     }
-    if (!images.some(({ url, isPrimary }) => url.trim() && isPrimary)) {
-      toast.error("Add at least one image and select its Primary checkbox.");
+    const productImages = images.filter(({ url }) => url.trim());
+    if (productImages.length > 0 && !productImages.some(({ isPrimary }) => isPrimary)) {
+      toast.error("Select a Primary image when you add product images.");
       return;
     }
     const seoEnabled = [metaTitle, metaDescription, keywords, canonicalUrl, ogImageUrl].some((value) => value.trim());
@@ -131,7 +137,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       description: description.trim() || null,
       hasVariations: kind === "variable",
       iconUrl: iconUrl.trim() || null,
-      images: images.filter(({ url }) => url.trim()).map((image) => ({ altText: image.altText?.trim() || null, isPrimary: image.isPrimary, priority: image.priority, url: image.url.trim() })),
+      images: productImages.map((image) => ({ altText: image.altText?.trim() || null, isPrimary: image.isPrimary, priority: image.priority, url: image.url.trim() })),
       isActive,
       isAvailableOnWeb,
       logoUrl: logoUrl.trim() || null,
@@ -187,10 +193,13 @@ export default function ProductFormDialog({ attributes, categories, initialParen
             });
           }));
         }
-      } else await createProduct(input);
+      } else {
+        const created = await createProduct(input);
+        setCreatedBarcode({ barcode: created.sku || `PRODUCT-${created.id}`, productName: created.name, productSku: created.sku });
+      }
       toast.success(`Product ${product ? "updated" : "created"} successfully.`);
       await onSaved();
-      onClose();
+      if (product) onClose();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to save product."); }
     finally { setSaving(false); }
   };
@@ -203,7 +212,13 @@ export default function ProductFormDialog({ attributes, categories, initialParen
     p: { xs: 2, md: 2.5 },
   } as const;
 
-  return <SwipeableDrawer
+  const testBarcodeItems = createdBarcode ? [createdBarcode] : [];
+  const closeAfterTestBarcode = () => { setCreatedBarcode(null); onClose(); };
+  const printTestBarcode = () => { try { printBarcodes(testBarcodeItems); closeAfterTestBarcode(); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to print barcode."); } };
+  const exportTestBarcode = () => { try { exportBarTenderCsv(testBarcodeItems); closeAfterTestBarcode(); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to export barcode."); } };
+
+  return <>
+  <SwipeableDrawer
     anchor="bottom"
     disableSwipeToOpen
     onClose={() => !saving && onClose()}
@@ -251,11 +266,11 @@ export default function ProductFormDialog({ attributes, categories, initialParen
         </Box>
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" } }}><TextField autoFocus label="Name" onChange={(event) => setName(event.target.value)} required value={name} /><TextField disabled={kind === "variation"} helperText={kind === "variation" ? `Inherited from ${selectedParent?.name ?? "parent product"}` : undefined} label="Select Category" onChange={(event) => { setCategoryId(Number(event.target.value)); setOptionByAttribute({}); }} required select value={kind === "variation" ? selectedParent?.category?.id ?? "" : categoryId}><MenuItem value="">Select category</MenuItem>{categoryOptions.map((category) => <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>)}</TextField></Box>
         <TextField label="Short Description" onChange={(event) => setShortDescription(event.target.value)} value={shortDescription} />
-        {kind !== "variable" ? <><Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" } }}><TextField label="Lowest Selling Price" onChange={(event) => setLowestSellingPrice(event.target.value)} required slotProps={{ htmlInput: { min: 0, step: "0.01" } }} type="number" value={lowestSellingPrice} /><TextField label="Maximum Purchasing Price" onChange={(event) => setMaxPurchasingPrice(event.target.value)} required slotProps={{ htmlInput: { min: 0, step: "0.01" } }} type="number" value={maxPurchasingPrice} /></Box>
-        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" } }}><TextField label="MRP Price" onChange={(event) => setMrpPrice(event.target.value)} required slotProps={{ htmlInput: { min: 0, step: "0.01" } }} type="number" value={mrpPrice} /><TextField helperText="Optional catalog code" label="Product Code / SKU" onChange={(event) => setSku(event.target.value.toUpperCase())} value={sku} /></Box></> : <Box sx={{ bgcolor: "action.hover", border: 1, borderColor: "divider", borderRadius: 2, p: 2 }}><Typography fontWeight={700} variant="body2">Prices are managed by child products</Typography><Typography color="text.secondary" mt={0.5} variant="caption">This parent groups its variations and does not have an independent selling, purchasing, or MRP price.</Typography></Box>}
+        {kind !== "variable" ? <><Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" } }}><TextField label="Lowest Selling Price" onChange={(event) => setLowestSellingPrice(event.target.value)} required slotProps={{ htmlInput: { min: 0, step: "0.01" } }} type="text" value={lowestSellingPrice} /><TextField label="Maximum Purchasing Price" onChange={(event) => setMaxPurchasingPrice(event.target.value)} required slotProps={{ htmlInput: { min: 0, step: "0.01" } }} type="text" value={maxPurchasingPrice} /></Box>
+        <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" } }}><TextField label="MRP Price" onChange={(event) => setMrpPrice(event.target.value)} required slotProps={{ htmlInput: { min: 0, step: "0.01" } }} type="text" value={mrpPrice} /><TextField helperText="Optional catalog code" label="Product Code / SKU" onChange={(event) => setSku(event.target.value.toUpperCase())} value={sku} /></Box></> : <Box sx={{ bgcolor: "action.hover", border: 1, borderColor: "divider", borderRadius: 2, p: 2 }}><Typography fontWeight={700} variant="body2">Prices are managed by child products</Typography><Typography color="text.secondary" mt={0.5} variant="caption">This parent groups its variations and does not have an independent selling, purchasing, or MRP price.</Typography></Box>}
         {kind !== "variable" && selectedCategory ? <Box><Typography fontWeight={700} mb={0.5} variant="body2">Required product attributes</Typography><Typography color="text.secondary" mb={1.5} variant="caption">These fields come from the selected category and its parent categories.</Typography>{applicableAttributes.length ? <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" } }}>{applicableAttributes.map((attribute) => <TextField key={attribute.id} label={attribute.displayName} onChange={(event) => setOptionByAttribute((current) => ({ ...current, [attribute.id]: Number(event.target.value) || "" }))} required select value={optionByAttribute[attribute.id] ?? ""}><MenuItem value="">Select {attribute.displayName}</MenuItem>{attribute.options.filter(({ isActive }) => isActive).map((option) => <MenuItem key={option.id} value={option.id}>{attribute.preUnit ?? ""}{option.label}{attribute.postUnit ?? ""}</MenuItem>)}</TextField>)}</Box> : <Typography color="text.secondary" variant="body2">This category has no required attributes.</Typography>}</Box> : null}
         <TextField label="Product Description" minRows={9} multiline onChange={(event) => setDescription(event.target.value)} placeholder="Type product description here." value={description} />
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}><TextField fullWidth label="Display priority" onChange={(event) => setPriority(Math.max(0, Number(event.target.value)))} slotProps={{ htmlInput: { min: 0 } }} type="number" value={priority} /><FormControlLabel control={<Switch checked={isAvailableOnWeb} onChange={(event) => setIsAvailableOnWeb(event.target.checked)} />} label="Available on website" /></Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}><TextField fullWidth label="Display priority" onChange={(event) => setPriority(Math.max(0, Number(event.target.value)))} slotProps={{ htmlInput: { min: 0 } }} type="text" value={priority} /><FormControlLabel control={<Switch checked={isAvailableOnWeb} onChange={(event) => setIsAvailableOnWeb(event.target.checked)} />} label="Available on website" /></Stack>
         </Stack>
       </Stack></Card>
       <Card sx={{ ...panelSx, alignSelf: "start", position: { lg: "sticky" }, top: 0 }}><Stack spacing={2}><Box><Typography fontWeight={700} variant="h6">Image Gallery</Typography><Typography color="text.secondary" variant="body2">Upload and manage the product photos.</Typography></Box><Stack alignItems="center" direction="row" justifyContent="space-between"><Typography fontWeight={700} variant="h6">Product Images</Typography><Button onClick={() => setImages((current) => [...current, { altText: null, clientId: crypto.randomUUID(), isPrimary: current.length === 0, priority: current.length, url: "" }])} startIcon={<AddPhotoAlternateOutlinedIcon />} variant="contained">New</Button></Stack>{images.map((image, index) => <CardImageRow image={image} index={index} key={image.clientId} onDelete={() => setImages((current) => current.filter((_, imageIndex) => imageIndex !== index))} onPrimary={() => setPrimaryImage(index)} onUpdate={(values) => updateImage(index, values)} />)}{!images.length ? <Box sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", display: "flex", justifyContent: "center", minHeight: 210, p: 3, textAlign: "center" }}><Typography color="text.secondary" variant="body2">No images uploaded yet.<br />Add an image URL with the New button.</Typography></Box> : null}</Stack></Card>
@@ -267,9 +282,9 @@ export default function ProductFormDialog({ attributes, categories, initialParen
           <Box sx={{ bgcolor: "action.hover", display: "grid", gap: 2, gridTemplateColumns: variationGridColumns, px: 2, py: 1.5 }}>{["Name", "Lowest Selling Price", "Maximum Purchase Price", "MRP Price", "Product Code", ...variationAttributes.map(({ displayName }) => displayName), "Status"].map((heading) => <Typography color="text.secondary" fontWeight={700} key={heading} variant="body2">{heading}</Typography>)}</Box>
           {product.variations.map((variation) => { const draft = variationDrafts[variation.id]; return <Box key={variation.id} sx={{ alignItems: "center", borderBottom: 1, borderColor: "divider", display: "grid", gap: 2, gridTemplateColumns: variationGridColumns, minHeight: 80, px: 2, py: 1.25, "& .MuiInputBase-root": { height: 42 } }}>
             <Box minWidth={0}><Typography fontWeight={700} noWrap>{variation.name}</Typography><Stack direction="row" flexWrap="wrap" gap={0.5} mt={0.5}>{variation.options.map((option) => <Chip color="primary" key={option.optionId} label={option.label} size="small" variant="outlined" />)}</Stack></Box>
-            <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], lowestSellingPrice: event.target.value } }))} size="small" type="number" value={draft?.lowestSellingPrice ?? variation.lowestSellingPrice} />
-            <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], maxPurchasingPrice: event.target.value } }))} size="small" type="number" value={draft?.maxPurchasingPrice ?? variation.maxPurchasingPrice} />
-            <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], mrpPrice: event.target.value } }))} size="small" type="number" value={draft?.mrpPrice ?? variation.mrpPrice} />
+            <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], lowestSellingPrice: event.target.value } }))} size="small" type="text" value={draft?.lowestSellingPrice ?? variation.lowestSellingPrice} />
+            <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], maxPurchasingPrice: event.target.value } }))} size="small" type="text" value={draft?.maxPurchasingPrice ?? variation.maxPurchasingPrice} />
+            <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], mrpPrice: event.target.value } }))} size="small" type="text" value={draft?.mrpPrice ?? variation.mrpPrice} />
             <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], sku: event.target.value.toUpperCase() } }))} size="small" value={draft?.sku ?? variation.sku ?? ""} />
             {variationAttributes.map((attribute) => { const selectedOption = variation.options.find(({ attributeId }) => attributeId === attribute.id); const selectedId = draft?.optionIds.find((optionId) => attribute.options.some(({ id }) => id === optionId)) ?? selectedOption?.optionId ?? ""; return <TextField key={attribute.id} onChange={(event) => { const nextId = Number(event.target.value); setVariationDrafts((current) => { const currentDraft = current[variation.id]; const otherIds = currentDraft.optionIds.filter((optionId) => !attribute.options.some(({ id }) => id === optionId)); return { ...current, [variation.id]: { ...currentDraft, optionIds: [...otherIds, nextId] } }; }); }} select size="small" value={selectedId}><MenuItem value="">Select</MenuItem>{attribute.options.filter(({ isActive }) => isActive).map((option) => <MenuItem key={option.id} value={option.id}>{attribute.preUnit ?? ""}{option.label}{attribute.postUnit ?? ""}</MenuItem>)}</TextField>; })}
             <IconButton aria-label={variation.isActive ? "Deactivate variation" : "Activate variation"} color={variation.isActive ? "error" : "success"} onClick={async () => { try { await updateProductStatus(variation.id, !variation.isActive); await onSaved(); toast.success(`Variation ${variation.isActive ? "deactivated" : "activated"}.`); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update variation status."); } }}><DoNotDisturbOnOutlinedIcon /></IconButton>
@@ -279,7 +294,22 @@ export default function ProductFormDialog({ attributes, categories, initialParen
 
       </Box>
     </Box>
-  </SwipeableDrawer>;
+  </SwipeableDrawer>
+  <Dialog fullWidth maxWidth="sm" open={Boolean(createdBarcode)} onClose={closeAfterTestBarcode}>
+    <DialogTitle>Print test barcode?</DialogTitle>
+    <DialogContent>
+      <Stack spacing={1.5} pt={1}>
+        <Typography color="text.secondary" variant="body2">Temporary testing option. This prints a product-level barcode only; real stock barcodes are still created from Add to Stock.</Typography>
+        <Typography fontWeight={700}>{createdBarcode?.barcode}</Typography>
+      </Stack>
+    </DialogContent>
+    <DialogActions>
+      <Button color="inherit" onClick={closeAfterTestBarcode}>Skip</Button>
+      <Button onClick={exportTestBarcode} startIcon={<DownloadRoundedIcon />} variant="outlined">Export BarTender CSV</Button>
+      <Button onClick={printTestBarcode} startIcon={<PrintRoundedIcon />} variant="contained">Browser Print</Button>
+    </DialogActions>
+  </Dialog>
+  </>;
 }
 
 function CardImageRow({ image, index, onDelete, onPrimary, onUpdate }: { image: ProductImageInput; index: number; onDelete: () => void; onPrimary: () => void; onUpdate: (values: Partial<ProductImageInput>) => void }) {

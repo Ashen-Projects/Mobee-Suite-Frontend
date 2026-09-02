@@ -20,6 +20,8 @@ import PurchaseOrders from "../pages/Dashboard/purchasing/PurchaseOrders";
 import GoodsReceivedNotes from "../pages/Dashboard/purchasing/GoodsReceivedNotes";
 import StockOverview from "../pages/Dashboard/inventory/StockOverview";
 import StockList from "../pages/Dashboard/inventory/StockList";
+import NewSale from "../pages/Dashboard/pos/NewSale";
+import SalesList from "../pages/Dashboard/pos/SalesList";
 import Locations from "../pages/Dashboard/settings/Locations";
 import DocumentSequences from "../pages/Dashboard/settings/DocumentSequences";
 import UserProfiles from "../pages/Dashboard/settings/UserProfile";
@@ -64,8 +66,8 @@ export default function Router() {
         {
           path: "pos",
           children: [
-            { path: "new-sale", element: placeholder(PATH_DASHBOARD.pos.newSale, "Point of Sale", "New Sale", "Create and process a new customer sale.") },
-            { path: "sales", element: placeholder(PATH_DASHBOARD.pos.sales, "Point of Sale", "Sales List", "Review completed and ongoing sales transactions.") },
+            { path: "new-sale", element: withPermission(PATH_DASHBOARD.pos.newSale, <NewSale />) },
+            { path: "sales", element: withPermission(PATH_DASHBOARD.pos.sales, <SalesList />) },
             { path: "returns", element: placeholder(PATH_DASHBOARD.pos.returns, "Point of Sale", "Sale Returns", "Review and manage returned sale items.") },
             { path: "refunds", element: placeholder(PATH_DASHBOARD.pos.refunds, "Point of Sale", "Refunds", "Review and manage customer refunds.") },
           ],

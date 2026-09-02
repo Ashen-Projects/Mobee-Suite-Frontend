@@ -219,7 +219,7 @@ export default function UserList() {
       <PageMeta description="View and manage Mobee Suite users." title="User List | Mobee Suite" />
       <Stack spacing={{ xs: 2, sm: 2.5 }}>
         <Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
-          <Box><Typography sx={{ fontSize: { xs: "1.5rem", sm: "1.75rem" }, fontWeight: 700, lineHeight: 1.25 }}>User List</Typography><Typography color="text.secondary" mt={0.5} variant="body2">{total} {total === 1 ? "user" : "users"} registered</Typography></Box>
+          <Typography sx={{ fontSize: { xs: "1.5rem", sm: "1.75rem" }, fontWeight: 700, lineHeight: 1.25 }}>User List</Typography>
           {can(USER_PERMISSIONS.USERS_CREATE) && <Button onClick={() => setCreateDialogOpen(true)} startIcon={<AddRoundedIcon />} variant="contained">Create User</Button>}
         </Stack>
         <Card sx={{ border: 1, borderColor: "divider", overflow: "hidden" }}>
