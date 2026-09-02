@@ -16,6 +16,12 @@ import ProductList from "../pages/Dashboard/products/ProductList";
 import Categories from "../pages/Dashboard/products/Categories";
 import Attributes from "../pages/Dashboard/products/Attributes";
 import Suppliers from "../pages/Dashboard/purchasing/Suppliers";
+import PurchaseOrders from "../pages/Dashboard/purchasing/PurchaseOrders";
+import GoodsReceivedNotes from "../pages/Dashboard/purchasing/GoodsReceivedNotes";
+import StockOverview from "../pages/Dashboard/inventory/StockOverview";
+import StockList from "../pages/Dashboard/inventory/StockList";
+import Locations from "../pages/Dashboard/settings/Locations";
+import DocumentSequences from "../pages/Dashboard/settings/DocumentSequences";
 import UserProfiles from "../pages/Dashboard/settings/UserProfile";
 import Calendar from "../pages/Dashboard/demo/Calendar";
 import Blank from "../pages/Dashboard/demo/Blank";
@@ -81,7 +87,8 @@ export default function Router() {
         {
           path: "inventory",
           children: [
-            { path: "overview", element: placeholder(PATH_DASHBOARD.inventory.overview, "Inventory", "Stock Overview", "Monitor current stock availability across locations.") },
+            { path: "overview", element: withPermission(PATH_DASHBOARD.inventory.overview, <StockOverview />) },
+            { path: "stocks", element: withPermission(PATH_DASHBOARD.inventory.stocks, <StockList />) },
             { path: "adjustments", element: placeholder(PATH_DASHBOARD.inventory.adjustments, "Inventory", "Stock Adjustments", "Review and manage stock correction records.") },
             { path: "transfers", element: placeholder(PATH_DASHBOARD.inventory.transfers, "Inventory", "Stock Transfers", "Track stock movements between Mobee locations.") },
             { path: "logs", element: placeholder(PATH_DASHBOARD.inventory.logs, "Inventory", "Stock Logs", "Inspect the complete history of inventory movements.") },
@@ -91,8 +98,10 @@ export default function Router() {
           path: "purchasing",
           children: [
             { path: "suppliers", element: withPermission(PATH_DASHBOARD.purchasing.suppliers, <Suppliers />) },
-            { path: "orders", element: placeholder(PATH_DASHBOARD.purchasing.orders, "Purchasing", "Purchase Orders", "Review and manage purchase orders.") },
-            { path: "goods-received-notes", element: placeholder(PATH_DASHBOARD.purchasing.goodsReceivedNotes, "Purchasing", "Goods Received Notes", "Track goods received against purchase orders.") },
+            { path: "orders", element: withPermission(PATH_DASHBOARD.purchasing.orders, <PurchaseOrders />) },
+            { path: "goods-received-notes", element: withPermission(PATH_DASHBOARD.purchasing.goodsReceivedNotes, <GoodsReceivedNotes workspace="receiving" />) },
+            { path: "grn-counts", element: withPermission(PATH_DASHBOARD.purchasing.grnCounts, <GoodsReceivedNotes workspace="counts" />) },
+            { path: "grn-final-approval", element: withPermission(PATH_DASHBOARD.purchasing.grnFinalApproval, <GoodsReceivedNotes workspace="finalApproval" />) },
             { path: "returns", element: placeholder(PATH_DASHBOARD.purchasing.returns, "Purchasing", "Purchase Returns", "Review inventory returned to suppliers.") },
             { path: "invoices", element: placeholder(PATH_DASHBOARD.purchasing.invoices, "Purchasing", "Supplier Invoices", "Review invoices received from suppliers.") },
             { path: "payments", element: placeholder(PATH_DASHBOARD.purchasing.payments, "Purchasing", "Supplier Payments", "Track payments made to suppliers.") },
@@ -124,8 +133,8 @@ export default function Router() {
         {
           path: "settings",
           children: [
-            { path: "locations", element: placeholder(PATH_DASHBOARD.settings.locations, "Settings", "Locations", "View and manage Mobee business locations.") },
-            { path: "document-sequences", element: placeholder(PATH_DASHBOARD.settings.documentSequences, "Settings", "Document Sequences", "Configure numbering sequences for business documents.") },
+            { path: "locations", element: withPermission(PATH_DASHBOARD.settings.locations, <Locations />) },
+            { path: "document-sequences", element: withPermission(PATH_DASHBOARD.settings.documentSequences, <DocumentSequences />) },
             { path: "profile", element: withPermission(PATH_DASHBOARD.settings.profile, <UserProfiles />) },
           ],
         },

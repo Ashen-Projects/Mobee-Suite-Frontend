@@ -41,6 +41,7 @@ export const PATH_DASHBOARD = {
   inventory: {
     root: path(ROOTS_DASHBOARD, "/inventory"),
     overview: path(ROOTS_DASHBOARD, "/inventory/overview"),
+    stocks: path(ROOTS_DASHBOARD, "/inventory/stocks"),
     adjustments: path(ROOTS_DASHBOARD, "/inventory/adjustments"),
     transfers: path(ROOTS_DASHBOARD, "/inventory/transfers"),
     logs: path(ROOTS_DASHBOARD, "/inventory/logs"),
@@ -50,6 +51,8 @@ export const PATH_DASHBOARD = {
     suppliers: path(ROOTS_DASHBOARD, "/purchasing/suppliers"),
     orders: path(ROOTS_DASHBOARD, "/purchasing/orders"),
     goodsReceivedNotes: path(ROOTS_DASHBOARD, "/purchasing/goods-received-notes"),
+    grnCounts: path(ROOTS_DASHBOARD, "/purchasing/grn-counts"),
+    grnFinalApproval: path(ROOTS_DASHBOARD, "/purchasing/grn-final-approval"),
     returns: path(ROOTS_DASHBOARD, "/purchasing/returns"),
     invoices: path(ROOTS_DASHBOARD, "/purchasing/invoices"),
     payments: path(ROOTS_DASHBOARD, "/purchasing/payments"),
@@ -104,11 +107,18 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   [PATH_DASHBOARD.userManagement.roles]: [USER_PERMISSIONS.ROLES_VIEW],
   [PATH_DASHBOARD.customers.list]: [USER_PERMISSIONS.CUSTOMER_VIEW],
   [PATH_DASHBOARD.products.list]: [USER_PERMISSIONS.PRODUCTS_VIEW],
-  [PATH_DASHBOARD.products.list]: [USER_PERMISSIONS.PRODUCTS_CREATE],
   [PATH_DASHBOARD.products.categories]: [USER_PERMISSIONS.PRODUCT_CATEGORIES_VIEW],
   [PATH_DASHBOARD.products.attributes]: [USER_PERMISSIONS.PRODUCT_ATTRIBUTES_VIEW],
+  [PATH_DASHBOARD.inventory.overview]: [USER_PERMISSIONS.STOCK_VIEW],
+  [PATH_DASHBOARD.inventory.stocks]: [USER_PERMISSIONS.STOCK_VIEW],
   [PATH_DASHBOARD.settings.profile]: [USER_ACCESS.GENERAL_DATA],
   [PATH_DASHBOARD.purchasing.suppliers]: [USER_PERMISSIONS.SUPPLIERS_VIEW],
+  [PATH_DASHBOARD.purchasing.orders]: [USER_PERMISSIONS.PURCHASE_ORDERS_VIEW],
+  [PATH_DASHBOARD.purchasing.goodsReceivedNotes]: [USER_PERMISSIONS.GRNS_VIEW],
+  [PATH_DASHBOARD.purchasing.grnCounts]: [USER_PERMISSIONS.GRNS_COUNT],
+  [PATH_DASHBOARD.purchasing.grnFinalApproval]: [USER_PERMISSIONS.GRNS_FINANCE_APPROVE],
+  [PATH_DASHBOARD.settings.locations]: [USER_PERMISSIONS.LOCATIONS_VIEW],
+  [PATH_DASHBOARD.settings.documentSequences]: [USER_PERMISSIONS.DOCUMENT_SEQUENCES_VIEW],
 
 };
 

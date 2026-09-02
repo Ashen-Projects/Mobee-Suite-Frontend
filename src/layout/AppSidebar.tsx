@@ -18,7 +18,9 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import BrandLogo from "../components/common/BrandLogo";
 import { useSidebar } from "../context/SidebarContext";
-import { PATH_DASHBOARD } from "../routes/paths";
+import useAuth from "../hooks/useAuth";
+import { PATH_DASHBOARD, getRoutePermissions } from "../routes/paths";
+import { USER_ACCESS } from "../utils";
 import { navItems } from "./navConfig";
 
 export const DRAWER_WIDTH = 252;
@@ -28,12 +30,17 @@ export default function AppSidebar() {
   const muiTheme = useMuiTheme();
   const isDesktop = useMediaQuery(muiTheme.breakpoints.up("xl"));
   const { isExpanded, isMobileOpen, toggleMobileSidebar } = useSidebar();
+  const { canAny } = useAuth();
   const { pathname } = useLocation();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const visibleNavItems = navItems.map((item) => item.subItems ? { ...item, subItems: item.subItems.filter((child) => {
+    const permissions = getRoutePermissions(child.path);
+    return permissions.includes(USER_ACCESS.PUBLIC) || canAny([...permissions]);
+  }) } : item).filter((item) => item.path || item.subItems?.length);
   useEffect(() => {
-    const activeParent = navItems.find((item) => item.subItems?.some((child) => child.path === pathname));
+    const activeParent = visibleNavItems.find((item) => item.subItems?.some((child) => child.path === pathname));
     if (activeParent) setOpenMenu(activeParent.name);
-  }, [pathname]);
+  }, [pathname, visibleNavItems]);
 
   const navigateOnMobile = () => {
     if (!isDesktop && isMobileOpen) toggleMobileSidebar();
@@ -48,7 +55,7 @@ export default function AppSidebar() {
       </Toolbar>
       <Divider />
       <List sx={{ overflowX: "hidden", overflowY: "auto", px: 1.25, py: 1.5 }}>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isSelected = item.path === pathname || item.subItems?.some((child) => child.path === pathname);
           const itemButton = (
             <ListItemButton

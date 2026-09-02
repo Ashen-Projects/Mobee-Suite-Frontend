@@ -13,7 +13,8 @@ import LogoutConfirmationDialog from "../components/common/LogoutConfirmationDia
 import { useTheme } from "../context/ThemeContext";
 import { useSidebar } from "../context/SidebarContext";
 import useAuth from "../hooks/useAuth";
-import { PATH_AUTH, PATH_DASHBOARD } from "../routes/paths";
+import { PATH_AUTH, PATH_DASHBOARD, getRoutePermissions } from "../routes/paths";
+import { USER_ACCESS } from "../utils";
 import { navItems, type NavItem } from "./navConfig";
 
 type NavMenuState = { anchor: HTMLElement; item: NavItem } | null;
@@ -23,13 +24,17 @@ export default function AppHeader() {
   const showHorizontalNav = useMediaQuery(muiTheme.breakpoints.up("xl"));
   const { toggleMobileSidebar } = useSidebar();
   const { theme, toggleTheme } = useTheme();
-  const { logout, user } = useAuth();
+  const { canAny, logout, user } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [accountAnchor, setAccountAnchor] = useState<HTMLElement | null>(null);
   const [navMenu, setNavMenu] = useState<NavMenuState>(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const visibleNavItems = navItems.map((item) => item.subItems ? { ...item, subItems: item.subItems.filter((child) => {
+    const permissions = getRoutePermissions(child.path);
+    return permissions.includes(USER_ACCESS.PUBLIC) || canAny([...permissions]);
+  }) } : item).filter((item) => item.path || item.subItems?.length);
 
   const openNavMenu = (event: MouseEvent<HTMLElement>, item: NavItem) => setNavMenu({ anchor: event.currentTarget, item });
   const closeNavMenu = () => setNavMenu(null);
@@ -48,7 +53,7 @@ export default function AppHeader() {
       <Box component={Link} sx={{ alignItems: "center", display: "flex", flexShrink: 0, textDecoration: "none" }} to={PATH_DASHBOARD.dashboard.root}><BrandLogo sx={{ maxHeight: { xs: 38, sm: 44 }, width: { xs: 132, sm: 154 } }} /></Box>
 
       {showHorizontalNav ? <Stack alignItems="center" bgcolor="action.hover" borderRadius={999} component="nav" direction="row" justifyContent="center" spacing={0.1} sx={{ flex: "0 1 auto", mx: "auto", p: 0.35 }}>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const active = item.path === pathname || item.subItems?.some((child) => child.path === pathname);
           return <Button
             color={active ? "primary" : "inherit"}
