@@ -75,6 +75,17 @@ export type SaleListResponse = {
   items: SaleListItem[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 };
+export type DailySalesSummaryItem = {
+  date: string;
+  discountAmount: number;
+  paidAmount: number;
+  saleCount: number;
+  totalAmount: number;
+};
+export type DailySalesSummaryResponse = {
+  items: DailySalesSummaryItem[];
+  totals: Omit<DailySalesSummaryItem, "date">;
+};
 
 type State = { error: string | null; items: SaleListItem[]; pagination: SaleListResponse["pagination"] };
 const initialState: State = { error: null, items: [], pagination: { page: 1, pageSize: 10, total: 0, totalPages: 0 } };
@@ -119,3 +130,6 @@ export const getSales = async (query: Record<string, unknown>): Promise<SaleList
 };
 
 export const getSale = async (id: number) => (await get<SaleDetail>(`sales/${id}`)).data;
+
+export const getDailySalesSummary = async (query: { fromDate: string; toDate: string }) =>
+  (await get<DailySalesSummaryResponse>("sales/summary/daily", query, undefined, undefined, { trackLoading: false })).data;
