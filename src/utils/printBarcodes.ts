@@ -12,8 +12,6 @@ const csvValue = (value: string | null | undefined) => `"${String(value ?? "").r
 const mobeeLogoUrl = "https://res.cloudinary.com/gxsancbf/image/upload/v1787844231/Mobee-suite.png";
 const labelWidth = "30mm";
 const labelHeight = "20mm";
-const labelOffsetX = "0mm";
-const labelOffsetY = "0mm";
 
 const code128Svg = (value: string) => {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -49,8 +47,8 @@ export const printBarcodes = (items: BarcodePrintItem[]) => {
     html, body {
       color: #000;
       font-family: Arial, Helvetica, sans-serif;
+      height: auto;
       margin: 0;
-      min-height: ${labelHeight};
       padding: 0;
       width: ${labelWidth};
       -webkit-print-color-adjust: exact;
@@ -63,28 +61,28 @@ export const printBarcodes = (items: BarcodePrintItem[]) => {
       width: ${labelWidth};
     }
     .label {
+      align-items: center;
       break-after: page;
+      display: flex;
+      flex-direction: column;
       height: ${labelHeight};
+      justify-content: center;
       margin: 0;
       overflow: hidden;
       padding: 0;
       page-break-after: always;
       page-break-inside: avoid;
-      position: relative;
+      text-align: center;
       width: ${labelWidth};
     }
     .content {
       align-items: center;
       display: flex;
       flex-direction: column;
-      left: calc(50% + ${labelOffsetX});
-      position: absolute;
       text-align: center;
-      top: calc(50% + ${labelOffsetY});
-      transform: translate(-50%, -50%);
       width: 27mm;
     }
-    .label:last-child { break-after: auto; page-break-after: auto; }
+    .label:last-child { break-after: page; page-break-after: always; }
     .logo { display: block; height: 3.8mm; margin: 0 auto 0.45mm; max-width: 20mm; object-fit: contain; }
     .barcode { height: 9.8mm; width: 26.5mm; }
     .barcode svg { display: block; height: 100%; width: 100%; }
@@ -97,11 +95,17 @@ export const printBarcodes = (items: BarcodePrintItem[]) => {
       html, body {
         background: #fff;
         height: auto;
-        min-height: 0;
         overflow: visible;
       }
       .sheet { height: auto; overflow: visible; }
-      .label { border: 0; margin: 0; }
+      .label {
+        border: 0;
+        height: ${labelHeight} !important;
+        margin: 0 !important;
+        max-height: ${labelHeight};
+        min-height: ${labelHeight};
+        width: ${labelWidth} !important;
+      }
     }
   </style></head><body><main class="sheet">${labels}</main><script>window.onload=()=>{window.focus();window.print();};</script></body></html>`);
   page.document.close();
