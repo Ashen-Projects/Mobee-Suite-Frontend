@@ -29,6 +29,7 @@ const code128Svg = (value: string) => {
   return new XMLSerializer().serializeToString(svg);
 };
 
+//efe
 export const printBarcodes = (items: BarcodePrintItem[]) => {
   const printable = items.filter((item) => item.barcode.trim());
   if (!printable.length) throw new Error("No barcode numbers are available to print.");
