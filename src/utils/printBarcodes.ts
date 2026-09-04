@@ -29,7 +29,6 @@ const code128Svg = (value: string) => {
   return new XMLSerializer().serializeToString(svg);
 };
 
-//efe
 export const printBarcodes = (items: BarcodePrintItem[]) => {
   const printable = items.filter((item) => item.barcode.trim());
   if (!printable.length) throw new Error("No barcode numbers are available to print.");
@@ -50,14 +49,19 @@ export const printBarcodes = (items: BarcodePrintItem[]) => {
     html, body {
       color: #000;
       font-family: Arial, Helvetica, sans-serif;
-      height: ${labelHeight};
       margin: 0;
+      min-height: ${labelHeight};
       padding: 0;
       width: ${labelWidth};
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .sheet { display: block; margin: 0; padding: 0; }
+    .sheet {
+      display: block;
+      margin: 0;
+      padding: 0;
+      width: ${labelWidth};
+    }
     .label {
       break-after: page;
       height: ${labelHeight};
@@ -90,7 +94,13 @@ export const printBarcodes = (items: BarcodePrintItem[]) => {
       .label { background: #fff; border: 1px dashed #d6d6d6; margin: 0 0 8px; }
     }
     @media print {
-      body { background: #fff; }
+      html, body {
+        background: #fff;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+      }
+      .sheet { height: auto; overflow: visible; }
       .label { border: 0; margin: 0; }
     }
   </style></head><body><main class="sheet">${labels}</main><script>window.onload=()=>{window.focus();window.print();};</script></body></html>`);
