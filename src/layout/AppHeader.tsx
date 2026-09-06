@@ -51,10 +51,10 @@ export default function AppHeader() {
     } finally { setIsLoggingOut(false); }
   };
 
-  return <AppBar color="transparent" elevation={0} position="fixed" sx={{ bgcolor: "transparent", pointerEvents: "none", px: { xs: 1, sm: 2 }, pt: { xs: 1, sm: 1.5 }, width: "100%", zIndex: (value) => value.zIndex.drawer + 1 }}>
-    <Toolbar sx={{ backdropFilter: "blur(18px)", bgcolor: (value) => value.palette.mode === "dark" ? "rgba(17,17,17,0.94)" : "rgba(255,255,255,0.94)", border: 1, borderColor: (value) => value.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(51,51,51,0.08)", borderRadius: 999, boxShadow: (value) => value.palette.mode === "dark" ? "0 14px 36px rgba(0,0,0,0.32)" : "0 14px 36px rgba(51,51,51,0.14)", gap: { xs: 1, xl: 2.5 }, maxWidth: 1600, minHeight: { xs: 60, sm: 68 }, mx: "auto", pointerEvents: "auto", px: { xs: 1.25, sm: 1.75 }, width: "100%" }}>
+  return <AppBar color="transparent" elevation={0} position="fixed" sx={{ bgcolor: "transparent", pointerEvents: "none", px: { xs: 0.75, sm: 1.25, md: 2 }, pt: { xs: 0.75, sm: 1.25, md: 1.5 }, width: "100%", zIndex: (value) => value.zIndex.drawer + 1 }}>
+    <Toolbar sx={{ backdropFilter: "blur(18px)", bgcolor: (value) => value.palette.mode === "dark" ? "rgba(17,17,17,0.94)" : "rgba(255,255,255,0.94)", border: 1, borderColor: (value) => value.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(51,51,51,0.08)", borderRadius: 999, boxShadow: (value) => value.palette.mode === "dark" ? "0 14px 36px rgba(0,0,0,0.32)" : "0 14px 36px rgba(51,51,51,0.14)", gap: { xs: 0.5, sm: 1, xl: 2.5 }, maxWidth: 1600, minHeight: { xs: 56, sm: 62, md: 68 }, mx: "auto", pointerEvents: "auto", px: { xs: 0.75, sm: 1.25, md: 1.75 }, width: "100%" }}>
       {!showHorizontalNav ? <IconButton aria-label="Open navigation" edge="start" onClick={toggleMobileSidebar}><MenuRoundedIcon /></IconButton> : null}
-      <Box component={Link} sx={{ alignItems: "center", display: "flex", flexShrink: 0, textDecoration: "none" }} to={PATH_DASHBOARD.dashboard.root}><BrandLogo sx={{ maxHeight: { xs: 38, sm: 44 }, width: { xs: 132, sm: 154 } }} /></Box>
+      <Box component={Link} sx={{ alignItems: "center", display: "flex", flexShrink: 1, minWidth: 0, textDecoration: "none" }} to={PATH_DASHBOARD.dashboard.root}><BrandLogo sx={{ maxHeight: { xs: 34, sm: 40, md: 44 }, width: { xs: 112, sm: 138, md: 154 } }} /></Box>
       {canOpenPos ? <Button
         component={Link}
         startIcon={<PointOfSaleRoundedIcon />}
@@ -66,8 +66,8 @@ export default function AppHeader() {
           flexShrink: 0,
           fontSize: { xs: 0, sm: 13 },
           fontWeight: 900,
-          height: { xs: 42, sm: 44 },
-          minWidth: { xs: 42, sm: 88 },
+          height: { xs: 38, sm: 42, md: 44 },
+          minWidth: { xs: 38, sm: 82, md: 88 },
           px: { xs: 0, sm: 1.6 },
           textTransform: "uppercase",
           "& .MuiButton-startIcon": { m: { xs: 0, sm: "0 6px 0 0" } },
@@ -94,10 +94,10 @@ export default function AppHeader() {
         })}
       </Stack> : <Box sx={{ flex: 1 }} />}
 
-      <Stack alignItems="center" bgcolor="action.hover" borderRadius={999} direction="row" spacing={0.25} sx={{ flexShrink: 0, p: 0.5 }}>
-        <Tooltip title={theme === "dark" ? "Use light theme" : "Use dark theme"}><IconButton aria-label="Toggle color theme" onClick={toggleTheme} size="small" sx={{ height: 36, width: 36 }}>{theme === "dark" ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}</IconButton></Tooltip>
-        <Tooltip title="Notifications"><IconButton aria-label="Notifications" size="small" sx={{ height: 36, width: 36 }}><Badge color="error" variant="dot"><NotificationsNoneOutlinedIcon fontSize="small" /></Badge></IconButton></Tooltip>
-        <Tooltip title="Account"><IconButton aria-label="Open user menu" onClick={(event) => setAccountAnchor(event.currentTarget)} size="small" sx={{ p: 0.25 }}><Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: 14, height: 32, width: 32 }}>{(user?.displayName || user?.username || "U").charAt(0).toUpperCase()}</Avatar></IconButton></Tooltip>
+      <Stack alignItems="center" bgcolor="action.hover" borderRadius={999} direction="row" spacing={0.25} sx={{ flexShrink: 0, p: { xs: 0.25, sm: 0.5 } }}>
+        <Tooltip title={theme === "dark" ? "Use light theme" : "Use dark theme"}><IconButton aria-label="Toggle color theme" onClick={toggleTheme} size="small" sx={{ height: { xs: 32, sm: 36 }, width: { xs: 32, sm: 36 } }}>{theme === "dark" ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}</IconButton></Tooltip>
+        <Tooltip title="Notifications"><IconButton aria-label="Notifications" size="small" sx={{ display: { xs: "none", sm: "inline-flex" }, height: 36, width: 36 }}><Badge color="error" variant="dot"><NotificationsNoneOutlinedIcon fontSize="small" /></Badge></IconButton></Tooltip>
+        <Tooltip title="Account"><IconButton aria-label="Open user menu" onClick={(event) => setAccountAnchor(event.currentTarget)} size="small" sx={{ p: 0.25 }}><Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: 14, height: { xs: 30, sm: 32 }, width: { xs: 30, sm: 32 } }}>{(user?.displayName || user?.username || "U").charAt(0).toUpperCase()}</Avatar></IconButton></Tooltip>
       </Stack>
     </Toolbar>
 

@@ -8,6 +8,8 @@ import PurchaseOrderRedux from "./slices/purchaseRedux/purchaseOrderRedux";
 import GrnRedux from "./slices/purchaseRedux/grnRedux";
 import BusinessSettingsRedux from "./slices/settingsRedux/businessSettingsRedux";
 import SaleRedux from "./slices/posRedux/saleRedux";
+import RepairRedux from "./slices/repairRedux/repairRedux";
+import CustomerRedux from "./slices/customerRedux/customerRedux";
 import RolePermissionRedux from "./slices/userManagementRedux/rolePermissionRedux";
 import UserManagementRedux from "./slices/userManagementRedux/userManagementRedux";
 
@@ -22,6 +24,8 @@ const rootReducer = combineReducers({
   loading,
   product: persistReducer({ key: "product", storage }, ProductRedux),
   sale: persistReducer({ key: "sale", storage }, SaleRedux),
+  repair: persistReducer({ key: "repair", storage }, RepairRedux),
+  customer: persistReducer({ key: "customer", storage }, CustomerRedux),
   purchaseOrder: persistReducer({ key: "purchaseOrder", storage }, PurchaseOrderRedux),
   grn: persistReducer({ key: "grn", storage }, GrnRedux),
   rolePermission: persistReducer({ key: "rolePermission", storage }, RolePermissionRedux),

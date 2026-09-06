@@ -75,22 +75,24 @@ export default function SalesList() {
   const SalesTableFooter = useCallback(() => (
     <Box>
       <Stack
-        alignItems="center"
-        direction="row"
+        alignItems={{ xs: "stretch", sm: "center" }}
+        direction={{ xs: "column", sm: "row" }}
+        gap={1}
         justifyContent="space-between"
         sx={{
           borderTop: 1,
           borderColor: "divider",
-          minHeight: 64,
-          px: { xs: 2, md: 3 },
+          minHeight: { xs: 76, sm: 64 },
+          px: { xs: 1.5, md: 3 },
+          py: { xs: 1.25, sm: 0 },
         }}
       >
-        <Stack direction="row" spacing={2.5}>
+        <Stack direction="row" flexWrap="wrap" gap={{ xs: 1, sm: 2.5 }}>
           <Typography color="text.secondary" fontWeight={700} variant="body2">{summary?.totals.saleCount ?? 0} sales</Typography>
           <Typography color="text.secondary" fontWeight={700} variant="body2">Discount {fCurrency(summary?.totals.discountAmount ?? 0)}</Typography>
           <Typography color="text.secondary" fontWeight={700} variant="body2">Paid {fCurrency(summary?.totals.paidAmount ?? 0)}</Typography>
         </Stack>
-        <Stack alignItems="center" direction="row" spacing={1.5}>
+        <Stack alignItems="center" direction="row" justifyContent={{ xs: "space-between", sm: "flex-end" }} spacing={1.5}>
           <Typography color="text.secondary" fontWeight={800} variant="body1">Total Sale</Typography>
           <Typography color="primary.main" fontWeight={900} variant="h5">{fCurrency(summary?.totals.totalAmount ?? 0)}</Typography>
         </Stack>
@@ -101,9 +103,9 @@ export default function SalesList() {
 
   return <>
     <PageMeta description="Review completed customer sales and print invoice receipts." title="Sales List | Mobee Suite" />
-    <Box sx={isPosMode ? { bgcolor: "background.default", inset: 0, overflow: "auto", p: { xs: 2, md: 3 }, position: "fixed", zIndex: (theme) => theme.zIndex.modal - 1 } : undefined}>
+    <Box sx={isPosMode ? { bgcolor: "background.default", inset: 0, overflow: "auto", p: { xs: 1.25, sm: 2, md: 3 }, position: "fixed", zIndex: (theme) => theme.zIndex.modal - 1 } : undefined}>
     <Stack spacing={2.25} sx={{ mx: "auto", width: "min(1500px, 100%)" }}>
-      <Stack alignItems="center" direction="row" justifyContent="space-between">
+      <Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} gap={1.5} justifyContent="space-between">
         <Stack alignItems="center" direction="row" spacing={1}><ReceiptLongRoundedIcon color="primary" /><Typography variant="h4">Sales List</Typography></Stack>
         <Stack alignItems="center" direction="row" gap={1} flexWrap="wrap">
           {isPosMode ? <Button color="inherit" onClick={() => navigate(PATH_DASHBOARD.pos.root)} startIcon={<ArrowBackRoundedIcon />} variant="outlined">Back to POS</Button> : null}
@@ -117,7 +119,9 @@ export default function SalesList() {
             <option value="all">All statuses</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="returned">Returned</option>
           </TextField>
         </Stack>
-        <DataGrid columns={columns} disableColumnMenu disableRowSelectionOnClick getRowHeight={() => 58} onPaginationModelChange={(model) => { setPage(model.page); setPageSize(model.pageSize); }} onRowClick={({ row }) => void openSale(row.id)} pageSizeOptions={PAGE_SIZE_OPTIONS} paginationMode="server" paginationModel={{ page, pageSize }} rowCount={total} rows={rows} slots={{ footer: SalesTableFooter }} sx={{ border: 0, cursor: "pointer", minHeight: 610, "& .MuiDataGrid-cell": { alignItems: "center", display: "flex" }, "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within": { outline: "none" } }} />
+        <Box sx={{ overflowX: "auto" }}>
+          <DataGrid columns={columns} disableColumnMenu disableRowSelectionOnClick getRowHeight={() => 58} onPaginationModelChange={(model) => { setPage(model.page); setPageSize(model.pageSize); }} onRowClick={({ row }) => void openSale(row.id)} pageSizeOptions={PAGE_SIZE_OPTIONS} paginationMode="server" paginationModel={{ page, pageSize }} rowCount={total} rows={rows} slots={{ footer: SalesTableFooter }} sx={{ border: 0, cursor: "pointer", minHeight: 610, minWidth: { xs: 760, md: 0 }, "& .MuiDataGrid-cell": { alignItems: "center", display: "flex" }, "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within": { outline: "none" } }} />
+        </Box>
       </Card>
     </Stack>
     </Box>

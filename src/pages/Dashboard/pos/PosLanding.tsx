@@ -14,6 +14,7 @@ import PageMeta from "../../../components/common/PageMeta";
 import { closeDrawer, getCurrentDrawer, openDrawer, type CloseDrawerResult, type PosDrawer } from "../../../redux/slices/posRedux/drawerRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
 import { fCurrency } from "../../../utils/formatNumber";
+import { printDrawerSummaryReceipt } from "../../../utils/printDrawerSummaryReceipt";
 
 const amount = (value: string) => Number(value.replace(/[^\d.]/g, "")) || 0;
 const dateTime = (value: number) => new Date(value).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
@@ -67,6 +68,10 @@ export default function PosLanding() {
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeForm, setCloseForm] = useState({ bank: "", card: "", cash: "", expense: "", note: "" });
   const [lastClose, setLastClose] = useState<CloseDrawerResult | null>(null);
+  const countedCash = amount(closeForm.cash);
+  const countedCardTotal = amount(closeForm.card);
+  const countedBankTransferTotal = amount(closeForm.bank);
+  const cashExpenseAmount = amount(closeForm.expense);
 
   const load = async () => {
     setLoading(true);
@@ -98,16 +103,25 @@ export default function PosLanding() {
   };
 
   const submitClose = async () => {
+    if (!drawer) return;
     setSaving(true);
     try {
-      const closed = await closeDrawer({
-        cashExpenseAmount: amount(closeForm.expense),
-        countedBankTransferTotal: amount(closeForm.bank),
-        countedCardTotal: amount(closeForm.card),
-        countedCash: amount(closeForm.cash),
+      const closeInputs = {
+        cashExpenseAmount,
+        countedBankTransferTotal,
+        countedCardTotal,
+        countedCash,
         note: closeForm.note.trim() || undefined,
+      };
+      const closed = await closeDrawer({
+        cashExpenseAmount: closeInputs.cashExpenseAmount,
+        countedBankTransferTotal: closeInputs.countedBankTransferTotal,
+        countedCardTotal: closeInputs.countedCardTotal,
+        countedCash: closeInputs.countedCash,
+        note: closeInputs.note,
       });
       setLastClose(closed);
+      printDrawerSummaryReceipt(drawer, closed, closeInputs);
       setDrawer(null);
       setCloseOpen(false);
       setCloseForm({ bank: "", card: "", cash: "", expense: "", note: "" });
@@ -145,6 +159,16 @@ export default function PosLanding() {
           </Stack>
         </Stack>
 
+        {lastClose ? <Card sx={{ border: 1, borderColor: lastClose.difference === 0 ? "success.main" : "warning.main", p: 2 }}>
+          <Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
+            <Box>
+              <Typography fontWeight={900}>Last drawer closed</Typography>
+              <Typography color="text.secondary" variant="body2">{lastClose.summary.salesCount} sales • Total {fCurrency(lastClose.summary.totalAmount)}</Typography>
+            </Box>
+            <Chip color={lastClose.difference === 0 ? "success" : "warning"} label={`Cash difference ${fCurrency(lastClose.difference)}`} />
+          </Stack>
+        </Card> : null}
+
         {loading ? <Card sx={{ p: 3 }}><Skeleton height={44} /><Skeleton height={140} /></Card> : drawer ? (
           <Stack spacing={2.5}>
             <Card sx={{ p: 2.5 }}>
@@ -162,7 +186,7 @@ export default function PosLanding() {
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" } }}>
             <ActionCard description="Scan item, choose customer, collect payment." icon={<PointOfSaleRoundedIcon />} label="Create Sale" to={`${PATH_DASHBOARD.pos.newSale}?mode=pos`} />
             <ActionCard description="Review and re-print invoices." icon={<ReceiptLongRoundedIcon />} label="Sales List" to={`${PATH_DASHBOARD.pos.sales}?mode=pos`} />
-            <ActionCard description="Coming in POS phase 3." disabled icon={<BuildRoundedIcon />} label="Create Repair Job" />
+            <ActionCard description="Receive customer devices and print job receipt." icon={<BuildRoundedIcon />} label="Create Repair Job" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&create=1`} />
             <ActionCard description="Future warranty workflow." disabled icon={<ShieldRoundedIcon />} label="Warranty Claim" />
           </Box>
           </Stack>
@@ -201,8 +225,14 @@ export default function PosLanding() {
       <DialogContent dividers>
         <Stack spacing={2}>
           <Typography color="text.secondary" variant="body2">Enter actual counted totals from the cash drawer and payment devices.</Typography>
+          <Box sx={{ bgcolor: "action.hover", borderRadius: 2, display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, p: 1.5 }}>
+            <Box><Typography color="text.secondary" variant="caption">Opening cash</Typography><Typography fontWeight={800}>{fCurrency(Number(drawer?.openingCash ?? 0))}</Typography></Box>
+            <Box><Typography color="text.secondary" variant="caption">Cashier</Typography><Typography fontWeight={800}>{drawer?.userName ?? "—"}</Typography></Box>
+            <Box><Typography color="text.secondary" variant="caption">Location</Typography><Typography fontWeight={800}>{drawer?.locationName ?? "—"}</Typography></Box>
+            <Box><Typography color="text.secondary" variant="caption">Opened</Typography><Typography fontWeight={800}>{drawer ? dateTime(drawer.openedAt) : "—"}</Typography></Box>
+          </Box>
           <TextField autoFocus inputProps={{ inputMode: "decimal" }} label="Counted cash amount" onChange={(event) => setCloseForm((current) => ({ ...current, cash: event.target.value }))} value={closeForm.cash} />
-          <TextField inputProps={{ inputMode: "decimal" }} label="Card total from machine" onChange={(event) => setCloseForm((current) => ({ ...current, card: event.target.value }))} value={closeForm.card} />
+          <TextField inputProps={{ inputMode: "decimal" }} label="Card total from card machine" onChange={(event) => setCloseForm((current) => ({ ...current, card: event.target.value }))} value={closeForm.card} />
           <TextField inputProps={{ inputMode: "decimal" }} label="Bank transfer total" onChange={(event) => setCloseForm((current) => ({ ...current, bank: event.target.value }))} value={closeForm.bank} />
           <TextField inputProps={{ inputMode: "decimal" }} label="Cash expense / petty cash" onChange={(event) => setCloseForm((current) => ({ ...current, expense: event.target.value }))} value={closeForm.expense} />
           <Divider />

@@ -4,6 +4,7 @@ import { fCurrency } from "./formatNumber";
 import JsBarcode from "jsbarcode";
 
 const LOGO_URL = "https://res.cloudinary.com/gxsancbf/image/upload/v1788373843/Mo_2.png";
+const BUSINESS_NAME = "MoBee.lk (PVT) Ltd.";
 const BUSINESS_PHONE = "0728920900";
 const BUSINESS_ADDRESS = "35/B Ingiriya Rd, Padukka";
 
@@ -49,66 +50,70 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   <head>
     <title>${escapeHtml(sale.invoiceNo)}</title>
     <style>
-      @page { margin: 0; size: 72mm 82mm; }
+      @page { margin: 0; size: 80mm auto; }
       * { box-sizing: border-box; }
       html,
       body {
         margin: 0;
         min-height: 0;
         padding: 0;
-        width: 72mm;
+        width: 80mm;
       }
       body {
         color: #111;
         font-family: Arial, Helvetica, sans-serif;
-        font-size: 9px;
-        line-height: 1.12;
+        font-size: 10.5px;
+        line-height: 1.16;
       }
       .receipt {
         margin: 0 auto;
         overflow: hidden;
-        padding: 0 1.4mm 0;
-        width: 72mm;
+        padding: 1mm 2.5mm 0;
+        width: 80mm;
       }
-      .logo { display: block; height: auto; margin: 0 auto .15mm; max-width: 24mm; }
-      h1 { font-size: 11px; letter-spacing: 1.3px; margin: .25mm 0 .25mm; text-align: center; text-transform: uppercase; }
-      .business { font-size: 8px; line-height: 1.08; margin: 0; text-align: center; }
+      .logo { display: block; height: auto; margin: 0 auto .35mm; max-width: 28mm; }
+      h1 { font-size: 13px; letter-spacing: 2px; margin: .6mm 0 .7mm; text-align: center; text-transform: uppercase; }
+      .business { font-size: 9.5px; line-height: 1.12; margin: 0; text-align: center; }
+      .business strong { font-size: 11px; }
       .muted { color: #555; }
       .center { text-align: center; }
-      .line { border-top: 1px dashed #222; margin: .65mm 0 .5mm; }
-      .meta { display: grid; grid-template-columns: 18mm minmax(0, 1fr); gap: .35mm 1.2mm; }
+      .line { border-top: 1px dashed #222; margin: 1mm 0 .8mm; }
+      .meta { display: grid; grid-template-columns: 20mm minmax(0, 1fr); gap: .45mm 1.4mm; }
       .meta div:nth-child(even) { text-align: right; }
       .meta span,
       .meta strong { min-width: 0; overflow-wrap: anywhere; }
-      .meta strong { font-size: 9px; }
-      .table-head { display: grid; grid-template-columns: minmax(0, 1fr) 23mm; font-size: 8.5px; font-weight: 800; letter-spacing: .35px; padding: 0 0 .35mm; text-transform: uppercase; }
+      .meta strong { font-size: 10.5px; }
+      .table-head { display: grid; grid-template-columns: minmax(0, 1fr) 25mm; font-size: 9.5px; font-weight: 800; letter-spacing: .35px; padding: 0 0 .45mm; text-transform: uppercase; }
       .table-head span:last-child { text-align: right; }
-      .item { border-top: 1px dashed #bbb; padding: .55mm 0; }
+      .item { border-top: 1px dashed #bbb; padding: .75mm 0; }
       .item:first-of-type { border-top: 0; }
-      .item-name { font-size: 9.5px; font-weight: 800; overflow-wrap: anywhere; }
-      .item-line { display: flex; justify-content: space-between; gap: 2mm; margin-top: .25mm; }
+      .item-name { font-size: 10.5px; font-weight: 800; overflow-wrap: anywhere; }
+      .item-line { display: flex; justify-content: space-between; gap: 2mm; margin-top: .35mm; }
       .item-line span { color: #444; }
       .item-line strong { white-space: nowrap; }
-      .item-code { color: #666; font-size: 8px; margin-top: .2mm; }
-      .summary { margin-left: auto; width: 39mm; }
-      .row { display: flex; justify-content: space-between; gap: 2mm; margin: .35mm 0; }
+      .item-code { color: #666; font-size: 9px; margin-top: .25mm; }
+      .summary { margin-left: auto; width: 45mm; }
+      .row { display: flex; justify-content: space-between; gap: 2mm; margin: .45mm 0; }
       .row span:last-child { text-align: right; white-space: nowrap; }
-      .total { border-top: 1px solid #111; font-size: 12px; font-weight: 900; margin-top: .5mm; padding-top: .45mm; text-transform: uppercase; }
-      .thanks { font-size: 10px; font-weight: 900; letter-spacing: .7px; margin: .55mm 0 .2mm; text-align: center; text-transform: uppercase; }
-      .barcode { display: flex; justify-content: center; margin-top: .45mm; page-break-inside: avoid; break-inside: avoid; }
-      .barcode svg { height: 10mm; max-width: 48mm; width: 48mm; }
+      .total { border-top: 1px solid #111; font-size: 14px; font-weight: 900; margin-top: .65mm; padding-top: .55mm; text-transform: uppercase; }
+      .thanks { font-size: 12px; font-weight: 900; letter-spacing: .8px; margin: .9mm 0 .35mm; text-align: center; text-transform: uppercase; }
+      .barcode { display: flex; justify-content: center; margin-top: .9mm; page-break-inside: avoid; break-inside: avoid; }
+      .barcode svg { height: 12mm; max-width: 58mm; width: 58mm; }
+      .printed { margin-top: .6mm; }
       p { margin: 0; }
       @media print {
         html,
         body {
           margin: 0 !important;
           padding: 0 !important;
-          width: 72mm !important;
+          width: 80mm !important;
         }
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .receipt {
-          padding: 0 1.4mm 0 !important;
-          width: 72mm !important;
+          page-break-after: avoid;
+          page-break-before: avoid;
+          padding: 1mm 2.5mm 0 !important;
+          width: 80mm !important;
         }
       }
     </style>
@@ -116,7 +121,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   <body>
     <div class="receipt">
       <img class="logo" src="${LOGO_URL}" />
-      <p class="business"><strong>MoBee.lk Suite</strong><br/>${BUSINESS_ADDRESS}<br/>${BUSINESS_PHONE}</p>
+      <p class="business"><strong>${BUSINESS_NAME}</strong><br/>${BUSINESS_ADDRESS}<br/>${BUSINESS_PHONE}</p>
       <div class="line"></div>
       <h1>Receipt</h1>
       <div class="meta">
@@ -144,7 +149,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
       <div class="thanks">Thank you!</div>
       <p class="center muted">We appreciate your purchase.<br/>Visit us again!</p>
       <div class="barcode">${invoiceBarcode}</div>
-      <p class="center muted">Printed ${printedAt}</p>
+      <p class="center muted printed">Printed ${printedAt}</p>
     </div>
     <script>
       window.onload = () => { window.focus(); window.print(); };

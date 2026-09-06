@@ -38,9 +38,23 @@ export const createMobeeTheme = (mode: PaletteMode) =>
       },
       MuiCssBaseline: {
         styleOverrides: {
-          body: { minWidth: 320 },
+          html: { width: "100%" },
+          body: { minWidth: 320, overflowX: "hidden", width: "100%" },
+          "#root": { minHeight: "100vh", minWidth: 0, width: "100%" },
           "*": { boxSizing: "border-box" },
-          ".MuiDataGrid-root": { minHeight: "620px" },
+          "img, svg, video, canvas": { maxWidth: "100%" },
+          ".MuiCard-root, .MuiPaper-root": { maxWidth: "100%" },
+          ".MuiDialog-paper": {
+            maxWidth: "calc(100% - 24px)",
+          },
+          ".MuiDialogActions-root": {
+            flexWrap: "wrap",
+            gap: 8,
+          },
+          ".MuiDataGrid-root": {
+            minHeight: "620px",
+            width: "100%",
+          },
           ".MuiDataGrid-root:focus, .MuiDataGrid-root:focus-within": {
             boxShadow: "none !important",
             outline: "none !important",
@@ -77,6 +91,67 @@ export const createMobeeTheme = (mode: PaletteMode) =>
           },
           ".MuiDataGrid-root .MuiDataGrid-footerContainer": { minHeight: 52 },
           ".MuiDataGrid-virtualScroller": { minHeight: "470px" },
+          "@media (max-width: 899.95px)": {
+            ".MuiDataGrid-root": {
+              minHeight: "460px",
+            },
+            ".MuiDataGrid-virtualScroller": {
+              minHeight: "310px",
+            },
+            ".MuiDataGrid-root .MuiDataGrid-columnHeaders": {
+              maxHeight: "44px !important",
+              minHeight: "44px !important",
+            },
+            ".MuiDataGrid-root .MuiDataGrid-row": {
+              maxHeight: "56px !important",
+              minHeight: "56px !important",
+            },
+            ".MuiDataGrid-root .MuiDataGrid-cell": {
+              fontSize: 12,
+              minWidth: 0,
+            },
+            ".MuiDataGrid-root .MuiDataGrid-footerContainer": {
+              gap: 8,
+              justifyContent: "flex-end",
+              minHeight: 48,
+              paddingLeft: 8,
+              paddingRight: 8,
+            },
+            ".MuiDataGrid-root .MuiTablePagination-toolbar": {
+              minHeight: 48,
+              paddingLeft: 0,
+            },
+            ".MuiDataGrid-root .MuiTablePagination-selectLabel": {
+              display: "none",
+            },
+          },
+          "@media (max-width: 599.95px)": {
+            ".MuiDialog-paper": {
+              margin: 8,
+              maxHeight: "calc(100% - 16px)",
+              maxWidth: "calc(100% - 16px)",
+              width: "calc(100% - 16px)",
+            },
+            ".MuiDialogTitle-root": {
+              padding: "16px 16px 12px",
+            },
+            ".MuiDialogContent-root": {
+              paddingLeft: 16,
+              paddingRight: 16,
+            },
+            ".MuiDialogActions-root": {
+              padding: "12px 16px 16px",
+            },
+            ".MuiButton-root": {
+              minHeight: 38,
+            },
+            ".MuiDataGrid-root": {
+              minHeight: "420px",
+            },
+            ".MuiDataGrid-root .MuiDataGrid-footerContainer .MuiTablePagination-displayedRows": {
+              marginLeft: 4,
+            },
+          },
         },
       },
       MuiDrawer: {
