@@ -20,6 +20,7 @@ import PurchaseOrders from "../pages/Dashboard/purchasing/PurchaseOrders";
 import GoodsReceivedNotes from "../pages/Dashboard/purchasing/GoodsReceivedNotes";
 import StockOverview from "../pages/Dashboard/inventory/StockOverview";
 import StockList from "../pages/Dashboard/inventory/StockList";
+import PosLanding from "../pages/Dashboard/pos/PosLanding";
 import NewSale from "../pages/Dashboard/pos/NewSale";
 import SalesList from "../pages/Dashboard/pos/SalesList";
 import Locations from "../pages/Dashboard/settings/Locations";
@@ -66,6 +67,7 @@ export default function Router() {
         {
           path: "pos",
           children: [
+            { index: true, element: withPermission(PATH_DASHBOARD.pos.root, <PosLanding />) },
             { path: "new-sale", element: withPermission(PATH_DASHBOARD.pos.newSale, <NewSale />) },
             { path: "sales", element: withPermission(PATH_DASHBOARD.pos.sales, <SalesList />) },
             { path: "returns", element: placeholder(PATH_DASHBOARD.pos.returns, "Point of Sale", "Sale Returns", "Review and manage returned sale items.") },

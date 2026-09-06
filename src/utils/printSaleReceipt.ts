@@ -4,6 +4,8 @@ import { fCurrency } from "./formatNumber";
 import JsBarcode from "jsbarcode";
 
 const LOGO_URL = "https://res.cloudinary.com/gxsancbf/image/upload/v1788373843/Mo_2.png";
+const BUSINESS_PHONE = "0728920900";
+const BUSINESS_ADDRESS = "35/B Ingiriya Rd, Padukka";
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -114,7 +116,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   <body>
     <div class="receipt">
       <img class="logo" src="${LOGO_URL}" />
-      <p class="business"><strong>MoBee.lk Suite</strong><br/>Customer Sales Receipt</p>
+      <p class="business"><strong>MoBee.lk Suite</strong><br/>${BUSINESS_ADDRESS}<br/>${BUSINESS_PHONE}</p>
       <div class="line"></div>
       <h1>Receipt</h1>
       <div class="meta">
