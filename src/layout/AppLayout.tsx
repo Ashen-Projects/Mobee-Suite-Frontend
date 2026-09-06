@@ -14,13 +14,14 @@ const LayoutContent = () => {
         sx={{
           flexGrow: 1,
           minWidth: 0,
-          px: { xs: 2, sm: 3, lg: 2 },
-          py: { xs: 2.5, sm: 3 },
+          overflowX: "clip",
+          px: { xs: 1.25, sm: 2, md: 3, lg: 2 },
+          py: { xs: 1.75, sm: 2.5, md: 3 },
           transition: (theme) => theme.transitions.create("margin-left"),
         }}
       >
-        <Toolbar sx={{ minHeight: { xs: 72, sm: 84 } }} />
-        <Box sx={{ maxWidth: 1536, mx: "auto", width: "100%" }}>
+        <Toolbar sx={{ minHeight: { xs: 70, sm: 78, md: 84 } }} />
+        <Box sx={{ maxWidth: 1536, minWidth: 0, mx: "auto", width: "100%" }}>
           <Outlet />
         </Box>
       </Box>

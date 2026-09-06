@@ -10,6 +10,7 @@ import Home from "../pages/Dashboard/home/HomeDashboard";
 import NotFound from "../pages/errorPages/Page404";
 import Unauthorized from "../pages/errorPages/PermissionRequired";
 import ModulePlaceholder from "../pages/Dashboard/components/ModulePlaceholder";
+import CustomerList from "../pages/Dashboard/customers/CustomerList";
 import UserList from "../pages/Dashboard/userManagement/UserList";
 import Roles from "../pages/Dashboard/userManagement/Roles";
 import ProductList from "../pages/Dashboard/products/ProductList";
@@ -23,6 +24,7 @@ import StockList from "../pages/Dashboard/inventory/StockList";
 import PosLanding from "../pages/Dashboard/pos/PosLanding";
 import NewSale from "../pages/Dashboard/pos/NewSale";
 import SalesList from "../pages/Dashboard/pos/SalesList";
+import RepairJobs from "../pages/Dashboard/repairs/RepairJobs";
 import Locations from "../pages/Dashboard/settings/Locations";
 import DocumentSequences from "../pages/Dashboard/settings/DocumentSequences";
 import UserProfiles from "../pages/Dashboard/settings/UserProfile";
@@ -38,6 +40,7 @@ import Images from "../pages/Dashboard/demo/Images";
 import Videos from "../pages/Dashboard/demo/Videos";
 import LineChart from "../pages/Dashboard/demo/LineChart";
 import BarChart from "../pages/Dashboard/demo/BarChart";
+import RepairStatus from "../pages/public/RepairStatus";
 import { PATH_AUTH, PATH_DASHBOARD, PATH_PAGE, getRoutePermissions } from "./paths";
 
 const withPermission = (route: string, element: ReactNode) => (
@@ -49,6 +52,7 @@ const placeholder = (route: string, section: string, title: string, description:
 
 export default function Router() {
   return useRoutes([
+    { path: PATH_DASHBOARD.repairs.status, element: <RepairStatus /> },
     {
       path: PATH_AUTH.root,
       children: [
@@ -77,7 +81,7 @@ export default function Router() {
         {
           path: "customers",
           children: [
-            { path: "list", element: placeholder(PATH_DASHBOARD.customers.list, "Customers", "Customer List", "View and manage customer records.") },
+            { path: "list", element: withPermission(PATH_DASHBOARD.customers.list, <CustomerList />) },
           ],
         },
         {
@@ -114,7 +118,7 @@ export default function Router() {
         {
           path: "repairs",
           children: [
-            { path: "jobs", element: placeholder(PATH_DASHBOARD.repairs.jobs, "Repairs", "Repair Jobs", "View and manage customer repair jobs.") },
+            { path: "jobs", element: withPermission(PATH_DASHBOARD.repairs.jobs, <RepairJobs />) },
             { path: "payments", element: placeholder(PATH_DASHBOARD.repairs.payments, "Repairs", "Repair Payments", "Track payments related to repair jobs.") },
           ],
         },
