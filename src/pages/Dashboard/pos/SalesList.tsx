@@ -1,15 +1,18 @@
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import { DataGrid, GridFooter, type GridColDef } from "@mui/x-data-grid";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
 import AdvancedDateRangeFilter from "../../../components/common/AdvancedDateRangeFilter";
 import PageMeta from "../../../components/common/PageMeta";
 import { getDailySalesSummary, getSale, getSales, type DailySalesSummaryResponse, type SaleDetail, type SaleListItem } from "../../../redux/slices/posRedux/saleRedux";
 import { fCurrency } from "../../../utils/formatNumber";
 import { printSaleReceipt } from "../../../utils/printSaleReceipt";
+import { PATH_DASHBOARD } from "../../../routes/paths";
 
 const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
 const toDateInput = (date: Date) => {
@@ -20,6 +23,9 @@ const today = toDateInput(new Date());
 const monthStart = toDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
 export default function SalesList() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isPosMode = searchParams.get("mode") === "pos";
   const [rows, setRows] = useState<SaleListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -95,10 +101,14 @@ export default function SalesList() {
 
   return <>
     <PageMeta description="Review completed customer sales and print invoice receipts." title="Sales List | Mobee Suite" />
-    <Stack spacing={2.5}>
+    <Box sx={isPosMode ? { bgcolor: "background.default", inset: 0, overflow: "auto", p: { xs: 2, md: 3 }, position: "fixed", zIndex: (theme) => theme.zIndex.modal - 1 } : undefined}>
+    <Stack spacing={2.25} sx={{ mx: "auto", width: "min(1500px, 100%)" }}>
       <Stack alignItems="center" direction="row" justifyContent="space-between">
         <Stack alignItems="center" direction="row" spacing={1}><ReceiptLongRoundedIcon color="primary" /><Typography variant="h4">Sales List</Typography></Stack>
-        <AdvancedDateRangeFilter fromDate={fromDate} onChange={(nextFrom, nextTo) => { setFromDate(nextFrom); setToDate(nextTo); setPage(0); }} toDate={toDate} />
+        <Stack alignItems="center" direction="row" gap={1} flexWrap="wrap">
+          {isPosMode ? <Button color="inherit" onClick={() => navigate(PATH_DASHBOARD.pos.root)} startIcon={<ArrowBackRoundedIcon />} variant="outlined">Back to POS</Button> : null}
+          <AdvancedDateRangeFilter fromDate={fromDate} onChange={(nextFrom, nextTo) => { setFromDate(nextFrom); setToDate(nextTo); setPage(0); }} toDate={toDate} />
+        </Stack>
       </Stack>
       <Card sx={{ borderRadius: 3, minHeight: 700, overflow: "hidden" }}>
         <Stack direction={{ xs: "column", md: "row" }} gap={1.5} p={1.5}>
@@ -110,6 +120,7 @@ export default function SalesList() {
         <DataGrid columns={columns} disableColumnMenu disableRowSelectionOnClick getRowHeight={() => 58} onPaginationModelChange={(model) => { setPage(model.page); setPageSize(model.pageSize); }} onRowClick={({ row }) => void openSale(row.id)} pageSizeOptions={PAGE_SIZE_OPTIONS} paginationMode="server" paginationModel={{ page, pageSize }} rowCount={total} rows={rows} slots={{ footer: SalesTableFooter }} sx={{ border: 0, cursor: "pointer", minHeight: 610, "& .MuiDataGrid-cell": { alignItems: "center", display: "flex" }, "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within": { outline: "none" } }} />
       </Card>
     </Stack>
+    </Box>
     <Dialog fullWidth maxWidth="md" onClose={() => setDetail(null)} open={Boolean(detail)}>
       <DialogTitle><Stack direction="row" justifyContent="space-between"><Box><Typography variant="h5">{detail?.invoiceNo}</Typography><Typography color="text.secondary" variant="body2">{detail?.customerName ?? "Walk-in Customer"} • {detail?.locationName}</Typography></Box><Button onClick={() => detail && printSaleReceipt(detail)} startIcon={<LocalPrintshopOutlinedIcon />} variant="contained">Print</Button></Stack></DialogTitle>
       <Divider />

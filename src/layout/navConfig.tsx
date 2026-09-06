@@ -26,7 +26,6 @@ export const navItems: NavItem[] = [
     icon: <DollarLineIcon />,
     name: "Point of Sale",
     subItems: [
-      { name: "New Sale", path: PATH_DASHBOARD.pos.newSale },
       { name: "Sales List", path: PATH_DASHBOARD.pos.sales },
       { name: "Sale Returns", path: PATH_DASHBOARD.pos.returns },
       { name: "Refunds", path: PATH_DASHBOARD.pos.refunds },

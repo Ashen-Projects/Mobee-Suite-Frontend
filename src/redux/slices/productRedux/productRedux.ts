@@ -82,7 +82,7 @@ export type ProductInput = {
   isAvailableOnWeb: boolean;
   logoUrl: string | null;
   lowestSellingPrice: number;
-  maxPurchasingPrice: number;
+  maxPurchasingPrice?: number;
   mrpPrice: number;
   name: string;
   optionIds: number[];

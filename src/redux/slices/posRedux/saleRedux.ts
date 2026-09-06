@@ -6,6 +6,7 @@ export type PaymentMethod = "cash" | "card" | "bankTransfer";
 
 export type SaleProductSearchItem = {
   barcode?: string | null;
+  costPrice: string;
   locationId: number | null;
   locationName: string | null;
   matchType: "barcode" | "imei" | "serial" | "product";
@@ -45,6 +46,7 @@ export type SaleDetail = {
   customerName: string | null;
   customerPhone: string | null;
   discountAmount: string;
+  drawerId: number | null;
   id: number;
   invoiceNo: string;
   items: Array<{
