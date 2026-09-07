@@ -12,6 +12,7 @@ import RepairRedux from "./slices/repairRedux/repairRedux";
 import CustomerRedux from "./slices/customerRedux/customerRedux";
 import RolePermissionRedux from "./slices/userManagementRedux/rolePermissionRedux";
 import UserManagementRedux from "./slices/userManagementRedux/userManagementRedux";
+import NotificationRedux from "./slices/notificationRedux/notificationRedux";
 
 const rootPersistConfig = {
   key: "root",
@@ -32,6 +33,7 @@ const rootReducer = combineReducers({
   supplier: persistReducer({ key: "supplier", storage }, SupplierRedux),
   businessSettings: persistReducer({ key: "businessSettings", storage }, BusinessSettingsRedux),
   userManagement: UserManagementRedux,
+  notifications: NotificationRedux,
 });
 
 export { rootPersistConfig, rootReducer };

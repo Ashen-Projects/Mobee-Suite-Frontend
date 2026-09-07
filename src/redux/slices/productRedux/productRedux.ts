@@ -64,6 +64,12 @@ export type ProductImageInput = {
   url: string;
 };
 
+export type ProductStockLevel = {
+  locationId: number;
+  locationName: string;
+  minimumStockLevel: number;
+};
+
 export type ProductSeoInput = {
   canonicalUrl?: string | null;
   keywords?: string | null;
@@ -91,6 +97,7 @@ export type ProductInput = {
   seo: ProductSeoInput | null;
   shortDescription: string | null;
   sku: string | null;
+  stockLevels: Array<Pick<ProductStockLevel, "locationId" | "minimumStockLevel">>;
 };
 
 export type ProductListItem = {
@@ -127,6 +134,7 @@ export type ProductDetail = ProductListItem & {
   }>;
   seo: (ProductSeoInput & { seoId: number }) | null;
   shortDescription: string | null;
+  stockLevels: ProductStockLevel[];
   variations: ProductDetail[];
 };
 
@@ -185,6 +193,9 @@ export const getProducts = async (query: Record<string, unknown>): Promise<Produ
 
 export const getProduct = async (id: number): Promise<ProductDetail> =>
   commit(get<ProductDetail>(`products/${id}`).then((response) => response.data), productSlice.actions.currentReceived);
+
+export const getProductStockLevelLocations = async (): Promise<ProductStockLevel[]> =>
+  (await get<ProductStockLevel[]>("products/stock-level-locations")).data;
 
 export const createProduct = async (input: ProductInput): Promise<ProductDetail> =>
   (await post<ProductDetail, ProductInput>("products", input, undefined, false)).data;

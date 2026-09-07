@@ -70,6 +70,7 @@ export const PATH_DASHBOARD = {
     purchasing: path(ROOTS_DASHBOARD, "/reports/purchasing"),
     repairs: path(ROOTS_DASHBOARD, "/reports/repairs"),
   },
+  notifications: path(ROOTS_DASHBOARD, "/notifications"),
   userManagement: {
     root: path(ROOTS_DASHBOARD, "/user-management"),
     users: path(ROOTS_DASHBOARD, "/user-management/users"),
@@ -124,6 +125,11 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   [PATH_DASHBOARD.purchasing.grnFinalApproval]: [USER_PERMISSIONS.GRNS_FINANCE_APPROVE],
   [PATH_DASHBOARD.settings.locations]: [USER_PERMISSIONS.LOCATIONS_VIEW],
   [PATH_DASHBOARD.settings.documentSequences]: [USER_PERMISSIONS.DOCUMENT_SEQUENCES_VIEW],
+  [PATH_DASHBOARD.reports.sales]: [USER_PERMISSIONS.SALES_VIEW],
+  [PATH_DASHBOARD.reports.inventory]: [USER_PERMISSIONS.STOCK_VIEW],
+  [PATH_DASHBOARD.reports.purchasing]: [USER_PERMISSIONS.GRNS_VIEW],
+  [PATH_DASHBOARD.reports.repairs]: [USER_PERMISSIONS.REPAIRS_VIEW],
+  [PATH_DASHBOARD.notifications]: [USER_ACCESS.GENERAL_DATA],
 
 };
 

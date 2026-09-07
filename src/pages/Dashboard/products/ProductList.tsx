@@ -11,7 +11,7 @@ import ProductFormDialog from "../../../components/products/ProductFormDialog";
 import useAuth from "../../../hooks/useAuth";
 import { USER_PERMISSIONS } from "../../../utils";
 import { fCurrency } from "../../../utils/formatNumber";
-import { getProduct, getProductAttributes, getProductCategories, getProducts, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductListItem } from "../../../redux/slices/productRedux/productRedux";
+import { getProduct, getProductAttributes, getProductCategories, getProducts, getProductStockLevelLocations, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductListItem, type ProductStockLevel } from "../../../redux/slices/productRedux/productRedux";
 
 type StatusFilter = "all" | "true" | "false";
 const PAGE_SIZE = 10;
@@ -25,6 +25,7 @@ export default function ProductList() {
   const [parents, setParents] = useState<ProductListItem[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
+  const [stockLevelLocations, setStockLevelLocations] = useState<ProductStockLevel[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
@@ -46,14 +47,16 @@ export default function ProductList() {
 
   const loadReferenceData = useCallback(async () => {
     try {
-      const [categoryRows, attributeRows, parentResponse] = await Promise.all([
+      const [categoryRows, attributeRows, parentResponse, stockLocations] = await Promise.all([
         getProductCategories({ includeInactive: "true" }),
         getProductAttributes({ includeInactive: "true" }),
         getProducts({ isActive: "all", page: 1, pageSize: 100, rootOnly: "true" }),
+        getProductStockLevelLocations(),
       ]);
       setCategories(categoryRows);
       setAttributes(attributeRows);
       setParents(parentResponse.items.filter(({ hasVariations }) => hasVariations));
+      setStockLevelLocations(stockLocations);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to load product setup data."); }
   }, []);
 
@@ -134,7 +137,7 @@ export default function ProductList() {
       </Card>
     </Stack>
 
-    <ProductFormDialog attributes={attributes} categories={categories} initialParentId={createParentId} onClose={() => { setFormOpen(false); setCreateParentId(null); }} onCreateVariation={(parentProductId) => { setFormOpen(false); setEditingProduct(null); setCreateParentId(parentProductId); window.setTimeout(() => setFormOpen(true), 0); }} onSaved={async () => { await Promise.all([loadProducts(), loadReferenceData()]); }} open={formOpen} parents={parents} product={editingProduct} />
+    <ProductFormDialog attributes={attributes} categories={categories} initialParentId={createParentId} onClose={() => { setFormOpen(false); setCreateParentId(null); }} onCreateVariation={(parentProductId) => { setFormOpen(false); setEditingProduct(null); setCreateParentId(parentProductId); window.setTimeout(() => setFormOpen(true), 0); }} onSaved={async () => { await Promise.all([loadProducts(), loadReferenceData()]); }} open={formOpen} parents={parents} product={editingProduct} stockLevelLocations={stockLevelLocations} />
 
     <Popover anchorEl={variationAnchor} anchorOrigin={{ horizontal: "left", vertical: "bottom" }} onClose={() => { setVariationAnchor(null); setVariationPreview(null); }} open={Boolean(variationAnchor)} transformOrigin={{ horizontal: "left", vertical: "top" }} slotProps={{ paper: { sx: { borderRadius: 1.5, mt: 0.75, overflow: "hidden", width: { xs: 350, sm: 620 } } } }}>
       <Stack><Stack alignItems="center" direction="row" justifyContent="space-between" px={1.75} py={1.5}><Box><Typography fontSize={14} fontWeight={700}>Variations &amp; Pricing</Typography><Typography color="text.secondary" fontSize={11.5}>{variationPreview?.variations.filter(({ isActive }) => isActive).length ?? 0} active {variationPreview?.variations.filter(({ isActive }) => isActive).length === 1 ? "variation" : "variations"}</Typography></Box><Stack direction="row" gap={0.5}><Chip color="primary" label={`${variationPreview?.variations.length ?? 0} Total`} size="small" variant="outlined" /><Chip label="Per-item stock" size="small" variant="outlined" /></Stack></Stack>

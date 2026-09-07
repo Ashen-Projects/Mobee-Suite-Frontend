@@ -10,7 +10,7 @@ import { Box, Button, Card, Checkbox, Chip, Dialog, DialogActions, DialogContent
 import { alpha } from "@mui/material/styles";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "react-toastify";
-import { createProduct, updateProduct, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductImageInput, type ProductInput, type ProductListItem } from "../../redux/slices/productRedux/productRedux";
+import { createProduct, updateProduct, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductImageInput, type ProductInput, type ProductListItem, type ProductStockLevel } from "../../redux/slices/productRedux/productRedux";
 import { exportBarTenderCsv, printBarcodes } from "../../utils/printBarcodes";
 
 type ProductKind = "simple" | "variable" | "variation";
@@ -25,6 +25,7 @@ type Props = {
   open: boolean;
   parents: ProductListItem[];
   product: ProductDetail | null;
+  stockLevelLocations: ProductStockLevel[];
 };
 type PrintableBarcode = { barcode: string; productName: string | null; productSku: string | null };
 
@@ -32,7 +33,7 @@ const emptyImages = (): FormImage[] => [];
 
 type VariationDraft = { lowestSellingPrice: string; mrpPrice: string; optionIds: number[]; sku: string };
 
-export default function ProductFormDialog({ attributes, categories, initialParentId = null, onClose, onCreateVariation, onSaved, open, parents, product }: Props) {
+export default function ProductFormDialog({ attributes, categories, initialParentId = null, onClose, onCreateVariation, onSaved, open, parents, product, stockLevelLocations }: Props) {
   const [tab, setTab] = useState(0);
   const [kind, setKind] = useState<ProductKind>("simple");
   const [name, setName] = useState("");
@@ -58,6 +59,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
   const [isActive, setIsActive] = useState(true);
   const [variationDrafts, setVariationDrafts] = useState<Record<number, VariationDraft>>({});
   const [createdBarcode, setCreatedBarcode] = useState<PrintableBarcode | null>(null);
+  const [minimumStockByLocation, setMinimumStockByLocation] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +92,9 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       optionIds: variation.options.map(({ optionId }) => optionId),
       sku: variation.sku ?? "",
     }])));
-  }, [initialParentId, open, product]);
+    const savedLevels = new Map(product?.stockLevels.map((level) => [level.locationId, level.minimumStockLevel]) ?? []);
+    setMinimumStockByLocation(Object.fromEntries(stockLevelLocations.map(({ locationId }) => [locationId, String(savedLevels.get(locationId) ?? 0)])));
+  }, [initialParentId, open, product, stockLevelLocations]);
 
   const selectedParent = useMemo(() => parents.find(({ id }) => id === parentId) ?? null, [parentId, parents]);
   const activeAttributes = useMemo(() => attributes.filter(({ isActive }) => isActive), [attributes]);
@@ -152,6 +156,10 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       } : null,
       shortDescription: shortDescription.trim() || null,
       sku: sku.trim() || null,
+      stockLevels: kind === "variable" ? [] : stockLevelLocations.map(({ locationId }) => ({
+        locationId,
+        minimumStockLevel: Math.max(0, Math.floor(Number(minimumStockByLocation[locationId] || 0))),
+      })),
     };
     setSaving(true);
     try {
@@ -171,6 +179,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
           seo: input.seo,
           shortDescription: input.shortDescription,
           sku: input.sku,
+          stockLevels: input.stockLevels,
         };
         await updateProduct(product.id, updateInput);
         if (isActive !== product.isActive) await updateProductStatus(product.id, isActive);
@@ -245,7 +254,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       <Divider />
       <Box px={{ xs: 2, md: 3 }} pt={1.5}>
         <Tabs onChange={(_event, value) => setTab(value)} value={tab} variant="scrollable" scrollButtons="auto" sx={{ border: 1, borderColor: "divider", borderRadius: 2, minHeight: 46, px: 1, "& .MuiTab-root": { minHeight: 44, textTransform: "none", fontWeight: 700 } }}>
-          <Tab label="Variations" disabled={kind === "simple"} /><Tab label="Product Info" />{product ? <Tab label="Price History" disabled /> : null}
+          <Tab label="Variations" disabled={kind === "simple"} /><Tab label="Product Info" /><Tab label="Stock Alerts" disabled={kind === "variable"} />{product ? <Tab label="Price History" disabled /> : null}
         </Tabs>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, md: 3 } }}>
@@ -282,6 +291,17 @@ export default function ProductFormDialog({ attributes, categories, initialParen
             <IconButton aria-label={variation.isActive ? "Deactivate variation" : "Activate variation"} color={variation.isActive ? "error" : "success"} onClick={async () => { try { await updateProductStatus(variation.id, !variation.isActive); await onSaved(); toast.success(`Variation ${variation.isActive ? "deactivated" : "activated"}.`); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update variation status."); } }}><DoNotDisturbOnOutlinedIcon /></IconButton>
           </Box>; })}
         </Box></Box> : <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", p: 5, textAlign: "center" }}><Typography fontWeight={700}>No variations yet</Typography><Typography color="text.secondary" variant="body2">Create the parent product first, then add each sellable variation.</Typography></Box>}
+      </Stack></Card> : null}
+
+      {tab === 2 ? <Card sx={{ ...panelSx, maxWidth: 920, mx: "auto" }}><Stack spacing={2.25}>
+        <Box><Typography fontWeight={700} variant="h6">Minimum stock alerts</Typography><Typography color="text.secondary" variant="body2">Set the available-unit threshold for each location. The dashboard warns when stock reaches or falls below this level. Use 0 to disable an alert.</Typography></Box>
+        <Box sx={{ bgcolor: "action.hover", border: 1, borderColor: "divider", borderRadius: 2, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) 220px" }, p: { xs: 1.5, sm: 2 } }}>
+          {stockLevelLocations.map((location) => <Box key={location.locationId} sx={{ alignItems: { sm: "center" }, display: "grid", gap: 1.25, gridColumn: "1 / -1", gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) 220px" } }}>
+            <Box><Typography fontSize={13.5} fontWeight={800}>{location.locationName}</Typography><Typography color="text.secondary" fontSize={11.5}>Alert threshold for this location</Typography></Box>
+            <TextField inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }} label="Minimum units" onChange={(event) => setMinimumStockByLocation((current) => ({ ...current, [location.locationId]: event.target.value.replace(/[^0-9]/g, "") }))} size="small" type="text" value={minimumStockByLocation[location.locationId] ?? "0"} />
+          </Box>)}
+          {!stockLevelLocations.length ? <Typography color="text.secondary" gridColumn="1 / -1" py={3} textAlign="center">No active locations are available.</Typography> : null}
+        </Box>
       </Stack></Card> : null}
 
       </Box>
