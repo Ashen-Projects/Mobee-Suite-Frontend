@@ -56,6 +56,15 @@ export default function RepairJobs() {
   const [statusNote, setStatusNote] = useState("");
   const [newStatus, setNewStatus] = useState<RepairStatus>("received");
   const pageTitle = isPosMode ? "Create Repair Job" : "Repair Jobs";
+  const hasCustomer = Boolean(
+    selectedCustomer?.id ||
+    (form.customerName.trim() && form.customerPhone.trim()),
+  );
+  const canCreateRepair = Boolean(
+    hasCustomer &&
+    form.deviceName.trim() &&
+    form.problemDescription.trim(),
+  );
 
   const load = async () => {
     try {
@@ -79,6 +88,8 @@ export default function RepairJobs() {
   const selectedCustomerDisplay = useMemo(() => selectedCustomer ? `${selectedCustomer.name} • ${selectedCustomer.phone ?? ""}` : "", [selectedCustomer]);
 
   const submit = async () => {
+    const deviceName = form.deviceName.trim();
+    const problemDescription = form.problemDescription.trim();
     const customer = selectedCustomer
       ? { id: selectedCustomer.id }
       : { name: form.customerName.trim(), phone: form.customerPhone.trim() };
@@ -86,13 +97,21 @@ export default function RepairJobs() {
       toast.error("Customer name and phone number are required.");
       return;
     }
+    if (!deviceName) {
+      toast.error("Device name is required.");
+      return;
+    }
+    if (!problemDescription) {
+      toast.error("Problem description is required.");
+      return;
+    }
     setSaving(true);
     try {
       const input: RepairJobInput = {
         customer,
-        deviceName: form.deviceName.trim(),
+        deviceName,
         estimatedCost: amount(form.estimatedCost),
-        problemDescription: form.problemDescription.trim(),
+        problemDescription,
         serialImei: form.serialImei.trim() || null,
       };
       const job = await createRepairJob(input);
@@ -217,18 +236,18 @@ export default function RepairJobs() {
             value={selectedCustomer}
           />
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <TextField disabled={Boolean(selectedCustomer)} label="Customer name *" onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))} value={form.customerName} />
-            <TextField disabled={Boolean(selectedCustomer)} inputProps={{ inputMode: "tel" }} label="Customer phone *" onChange={(event) => setForm((current) => ({ ...current, customerPhone: event.target.value }))} value={form.customerPhone} />
-            <TextField label="Device name *" onChange={(event) => setForm((current) => ({ ...current, deviceName: event.target.value }))} value={form.deviceName} />
-            <TextField label="IMEI / Serial / SN" onChange={(event) => setForm((current) => ({ ...current, serialImei: event.target.value }))} value={form.serialImei} />
+            <TextField disabled={Boolean(selectedCustomer)} inputProps={{ maxLength: 255 }} label="Customer name *" onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))} required value={form.customerName} />
+            <TextField disabled={Boolean(selectedCustomer)} inputProps={{ inputMode: "tel", maxLength: 30 }} label="Customer phone *" onChange={(event) => setForm((current) => ({ ...current, customerPhone: event.target.value }))} required value={form.customerPhone} />
+            <TextField inputProps={{ maxLength: 255 }} label="Device name *" onChange={(event) => setForm((current) => ({ ...current, deviceName: event.target.value }))} required value={form.deviceName} />
+            <TextField inputProps={{ maxLength: 255 }} label="IMEI / Serial / SN" onChange={(event) => setForm((current) => ({ ...current, serialImei: event.target.value }))} value={form.serialImei} />
             <TextField inputProps={{ inputMode: "decimal" }} label="Estimated cost" onChange={(event) => setForm((current) => ({ ...current, estimatedCost: event.target.value }))} value={form.estimatedCost} />
           </Box>
-          <TextField label="Problem description *" minRows={4} multiline onChange={(event) => setForm((current) => ({ ...current, problemDescription: event.target.value }))} value={form.problemDescription} />
+          <TextField inputProps={{ maxLength: 3000 }} label="Problem description *" minRows={4} multiline onChange={(event) => setForm((current) => ({ ...current, problemDescription: event.target.value }))} required value={form.problemDescription} />
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button color="inherit" disabled={saving} onClick={() => setOpen(false)}>Cancel</Button>
-        <Button disabled={saving} onClick={() => void submit()} startIcon={<LocalPrintshopRoundedIcon />} variant="contained">Create & print receipt</Button>
+        <Button disabled={saving || !canCreateRepair} onClick={() => void submit()} startIcon={<LocalPrintshopRoundedIcon />} variant="contained">Create & print receipt</Button>
       </DialogActions>
     </Dialog>
 

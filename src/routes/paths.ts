@@ -70,6 +70,7 @@ export const PATH_DASHBOARD = {
     purchasing: path(ROOTS_DASHBOARD, "/reports/purchasing"),
     repairs: path(ROOTS_DASHBOARD, "/reports/repairs"),
   },
+  notifications: path(ROOTS_DASHBOARD, "/notifications"),
   userManagement: {
     root: path(ROOTS_DASHBOARD, "/user-management"),
     users: path(ROOTS_DASHBOARD, "/user-management/users"),
@@ -79,6 +80,7 @@ export const PATH_DASHBOARD = {
     root: path(ROOTS_DASHBOARD, "/settings"),
     locations: path(ROOTS_DASHBOARD, "/settings/locations"),
     documentSequences: path(ROOTS_DASHBOARD, "/settings/document-sequences"),
+    dashboardControls: path(ROOTS_DASHBOARD, "/settings/dashboard-controls"),
     profile: path(ROOTS_DASHBOARD, "/settings/profile"),
   },
   demo: {
@@ -107,6 +109,7 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   [PATH_DASHBOARD.userManagement.users]: [USER_PERMISSIONS.USERS_VIEW],
   [PATH_DASHBOARD.userManagement.roles]: [USER_PERMISSIONS.ROLES_VIEW],
   [PATH_DASHBOARD.customers.list]: [USER_PERMISSIONS.CUSTOMERS_VIEW],
+  [PATH_DASHBOARD.customers.root]: [USER_PERMISSIONS.CUSTOMERS_VIEW],
   [PATH_DASHBOARD.pos.root]: [USER_PERMISSIONS.SALES_CREATE],
   [PATH_DASHBOARD.pos.newSale]: [USER_PERMISSIONS.SALES_CREATE],
   [PATH_DASHBOARD.pos.sales]: [USER_PERMISSIONS.SALES_VIEW],
@@ -124,6 +127,14 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   [PATH_DASHBOARD.purchasing.grnFinalApproval]: [USER_PERMISSIONS.GRNS_FINANCE_APPROVE],
   [PATH_DASHBOARD.settings.locations]: [USER_PERMISSIONS.LOCATIONS_VIEW],
   [PATH_DASHBOARD.settings.documentSequences]: [USER_PERMISSIONS.DOCUMENT_SEQUENCES_VIEW],
+  [PATH_DASHBOARD.settings.dashboardControls]: [USER_PERMISSIONS.DASHBOARD_CONTROLS_VIEW],
+  [PATH_DASHBOARD.reports.sales]: [USER_PERMISSIONS.SALES_VIEW],
+  [PATH_DASHBOARD.reports.inventory]: [USER_PERMISSIONS.STOCK_VIEW],
+  [PATH_DASHBOARD.reports.purchasing]: [USER_PERMISSIONS.GRNS_VIEW],
+  [PATH_DASHBOARD.reports.repairs]: [USER_PERMISSIONS.REPAIRS_VIEW],
+  [PATH_DASHBOARD.pos.root]: [USER_PERMISSIONS.POS_VIEW],
+  [PATH_DASHBOARD.pos.newSale]: [USER_PERMISSIONS.SALES_CREATE],
+  [PATH_DASHBOARD.notifications]: [USER_ACCESS.GENERAL_DATA],
 
 };
 

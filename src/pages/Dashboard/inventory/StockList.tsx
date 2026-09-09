@@ -10,6 +10,7 @@ import type { FormEvent } from "react";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import availabilitySuccessSound from "../../../assets/sounds/availability-success.wav";
 import PageMeta from "../../../components/common/PageMeta";
 import AddApprovedGrnStockDialog from "../../../components/inventory/AddApprovedGrnStockDialog";
 import StockProductUnitsDialog from "../../../components/inventory/StockProductUnitsDialog";
@@ -18,9 +19,14 @@ import { checkStockAvailability, getPendingStockReceipts, getStock, getStockStat
 import { getLocations, type Location } from "../../../redux/slices/settingsRedux/businessSettingsRedux";
 import { USER_PERMISSIONS } from "../../../utils";
 import { fCurrency } from "../../../utils/formatNumber";
+import { playSound } from "../../../utils/playSound";
 
 const pageSizes = [10, 15, 25, 50];
 const playScanSound = (success: boolean) => {
+  if (success) {
+    playSound(availabilitySuccessSound, 0.62);
+    return;
+  }
   const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextClass) return;
   const context = new AudioContextClass();

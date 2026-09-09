@@ -27,6 +27,7 @@ import SalesList from "../pages/Dashboard/pos/SalesList";
 import RepairJobs from "../pages/Dashboard/repairs/RepairJobs";
 import Locations from "../pages/Dashboard/settings/Locations";
 import DocumentSequences from "../pages/Dashboard/settings/DocumentSequences";
+import DashboardControls from "../pages/Dashboard/settings/DashboardControls";
 import UserProfiles from "../pages/Dashboard/settings/UserProfile";
 import Calendar from "../pages/Dashboard/demo/Calendar";
 import Blank from "../pages/Dashboard/demo/Blank";
@@ -41,6 +42,8 @@ import Videos from "../pages/Dashboard/demo/Videos";
 import LineChart from "../pages/Dashboard/demo/LineChart";
 import BarChart from "../pages/Dashboard/demo/BarChart";
 import RepairStatus from "../pages/public/RepairStatus";
+import ReportPage from "../pages/Dashboard/reports/ReportPage";
+import NotificationsPage from "../pages/Dashboard/notifications/NotificationsPage";
 import { PATH_AUTH, PATH_DASHBOARD, PATH_PAGE, getRoutePermissions } from "./paths";
 
 const withPermission = (route: string, element: ReactNode) => (
@@ -68,6 +71,7 @@ export default function Router() {
       children: [
         { index: true, element: <Navigate replace to={PATH_DASHBOARD.dashboard.root} /> },
         { path: "home", element: withPermission(PATH_DASHBOARD.dashboard.root, <Home />) },
+        { path: "notifications", element: withPermission(PATH_DASHBOARD.notifications, <NotificationsPage />) },
         {
           path: "pos",
           children: [
@@ -125,10 +129,10 @@ export default function Router() {
         {
           path: "reports",
           children: [
-            { path: "sales", element: placeholder(PATH_DASHBOARD.reports.sales, "Reports", "Sales Report", "Analyze sales performance and transaction trends.") },
-            { path: "inventory", element: placeholder(PATH_DASHBOARD.reports.inventory, "Reports", "Inventory Report", "Analyze stock levels and inventory movements.") },
-            { path: "purchasing", element: placeholder(PATH_DASHBOARD.reports.purchasing, "Reports", "Purchasing Report", "Analyze supplier and purchasing activity.") },
-            { path: "repairs", element: placeholder(PATH_DASHBOARD.reports.repairs, "Reports", "Repair Report", "Analyze repair volume, status, and revenue.") },
+            { path: "sales", element: withPermission(PATH_DASHBOARD.reports.sales, <ReportPage kind="sales" />) },
+            { path: "inventory", element: withPermission(PATH_DASHBOARD.reports.inventory, <ReportPage kind="inventory" />) },
+            { path: "purchasing", element: withPermission(PATH_DASHBOARD.reports.purchasing, <ReportPage kind="purchasing" />) },
+            { path: "repairs", element: withPermission(PATH_DASHBOARD.reports.repairs, <ReportPage kind="repairs" />) },
           ],
         },
         {
@@ -143,6 +147,7 @@ export default function Router() {
           children: [
             { path: "locations", element: withPermission(PATH_DASHBOARD.settings.locations, <Locations />) },
             { path: "document-sequences", element: withPermission(PATH_DASHBOARD.settings.documentSequences, <DocumentSequences />) },
+            { path: "dashboard-controls", element: withPermission(PATH_DASHBOARD.settings.dashboardControls, <DashboardControls />) },
             { path: "profile", element: withPermission(PATH_DASHBOARD.settings.profile, <UserProfiles />) },
           ],
         },

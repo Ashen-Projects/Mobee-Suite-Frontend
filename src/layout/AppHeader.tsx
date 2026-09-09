@@ -3,14 +3,14 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
-import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
-import { AppBar, Avatar, Badge, Box, Button, Divider, IconButton, ListItemIcon, Menu, MenuItem, Stack, Toolbar, Tooltip, useMediaQuery, useTheme as useMuiTheme } from "@mui/material";
+import { AppBar, Avatar, Box, Button, Divider, IconButton, ListItemIcon, Menu, MenuItem, Stack, Toolbar, Tooltip, useMediaQuery, useTheme as useMuiTheme } from "@mui/material";
 import { MouseEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import BrandLogo from "../components/common/BrandLogo";
 import LogoutConfirmationDialog from "../components/common/LogoutConfirmationDialog";
+import NotificationBell from "../components/notifications/NotificationBell";
 import { useTheme } from "../context/ThemeContext";
 import { useSidebar } from "../context/SidebarContext";
 import useAuth from "../hooks/useAuth";
@@ -96,7 +96,7 @@ export default function AppHeader() {
 
       <Stack alignItems="center" bgcolor="action.hover" borderRadius={999} direction="row" spacing={0.25} sx={{ flexShrink: 0, p: { xs: 0.25, sm: 0.5 } }}>
         <Tooltip title={theme === "dark" ? "Use light theme" : "Use dark theme"}><IconButton aria-label="Toggle color theme" onClick={toggleTheme} size="small" sx={{ height: { xs: 32, sm: 36 }, width: { xs: 32, sm: 36 } }}>{theme === "dark" ? <LightModeOutlinedIcon fontSize="small" /> : <DarkModeOutlinedIcon fontSize="small" />}</IconButton></Tooltip>
-        <Tooltip title="Notifications"><IconButton aria-label="Notifications" size="small" sx={{ display: { xs: "none", sm: "inline-flex" }, height: 36, width: 36 }}><Badge color="error" variant="dot"><NotificationsNoneOutlinedIcon fontSize="small" /></Badge></IconButton></Tooltip>
+        <NotificationBell />
         <Tooltip title="Account"><IconButton aria-label="Open user menu" onClick={(event) => setAccountAnchor(event.currentTarget)} size="small" sx={{ p: 0.25 }}><Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: 14, height: { xs: 30, sm: 32 }, width: { xs: 30, sm: 32 } }}>{(user?.displayName || user?.username || "U").charAt(0).toUpperCase()}</Avatar></IconButton></Tooltip>
       </Stack>
     </Toolbar>

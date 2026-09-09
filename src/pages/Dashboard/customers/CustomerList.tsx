@@ -270,7 +270,7 @@ export default function CustomerList() {
       </DialogActions>
     </Dialog>
     <Dialog fullWidth maxWidth="md" onClose={() => setProfile(null)} open={Boolean(profile) || profileLoading}>
-      <DialogTitle>
+      <DialogTitle component="div">
         <Stack alignItems="center" direction="row" justifyContent="space-between" gap={2}>
           <Stack alignItems="center" direction="row" gap={1.5} minWidth={0}>
             <Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontWeight: 900 }}>{profile ? initials(profile.name) : "C"}</Avatar>

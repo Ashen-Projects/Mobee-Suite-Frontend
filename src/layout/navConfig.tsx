@@ -102,6 +102,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { name: "Locations", path: PATH_DASHBOARD.settings.locations },
       { name: "Document Sequences", path: PATH_DASHBOARD.settings.documentSequences },
+      { name: "Dashboard Controls", path: PATH_DASHBOARD.settings.dashboardControls },
       { name: "My Profile", path: PATH_DASHBOARD.settings.profile },
     ],
   },

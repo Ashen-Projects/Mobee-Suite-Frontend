@@ -126,7 +126,7 @@ export default function SalesList() {
     </Stack>
     </Box>
     <Dialog fullWidth maxWidth="md" onClose={() => setDetail(null)} open={Boolean(detail)}>
-      <DialogTitle><Stack direction="row" justifyContent="space-between"><Box><Typography variant="h5">{detail?.invoiceNo}</Typography><Typography color="text.secondary" variant="body2">{detail?.customerName ?? "Walk-in Customer"} • {detail?.locationName}</Typography></Box><Button onClick={() => detail && printSaleReceipt(detail)} startIcon={<LocalPrintshopOutlinedIcon />} variant="contained">Print</Button></Stack></DialogTitle>
+      <DialogTitle component="div"><Stack direction="row" justifyContent="space-between"><Box><Typography variant="h5">{detail?.invoiceNo}</Typography><Typography color="text.secondary" variant="body2">{detail?.customerName ?? "Walk-in Customer"} • {detail?.locationName}</Typography></Box><Button onClick={() => detail && printSaleReceipt(detail)} startIcon={<LocalPrintshopOutlinedIcon />} variant="contained">Print</Button></Stack></DialogTitle>
       <Divider />
       <DialogContent>
         <Stack spacing={1.5}>{detail?.items.map((item) => <Box key={item.id} sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1.5 }}><Stack direction="row" justifyContent="space-between"><Box><Typography fontWeight={800}>{item.productName}</Typography><Typography color="text.secondary" variant="caption">{item.quantity} × {fCurrency(Number(item.unitPrice))}</Typography></Box><Typography fontWeight={800}>{fCurrency(Number(item.totalAmount))}</Typography></Stack></Box>)}</Stack>
