@@ -27,6 +27,7 @@ import SalesList from "../pages/Dashboard/pos/SalesList";
 import RepairJobs from "../pages/Dashboard/repairs/RepairJobs";
 import Locations from "../pages/Dashboard/settings/Locations";
 import DocumentSequences from "../pages/Dashboard/settings/DocumentSequences";
+import DashboardControls from "../pages/Dashboard/settings/DashboardControls";
 import UserProfiles from "../pages/Dashboard/settings/UserProfile";
 import Calendar from "../pages/Dashboard/demo/Calendar";
 import Blank from "../pages/Dashboard/demo/Blank";
@@ -146,6 +147,7 @@ export default function Router() {
           children: [
             { path: "locations", element: withPermission(PATH_DASHBOARD.settings.locations, <Locations />) },
             { path: "document-sequences", element: withPermission(PATH_DASHBOARD.settings.documentSequences, <DocumentSequences />) },
+            { path: "dashboard-controls", element: withPermission(PATH_DASHBOARD.settings.dashboardControls, <DashboardControls />) },
             { path: "profile", element: withPermission(PATH_DASHBOARD.settings.profile, <UserProfiles />) },
           ],
         },

@@ -1,5 +1,6 @@
-import { Box, Card, CardContent, Stack, Typography, useTheme } from "@mui/material";
+import { Box, Card, CardContent, Stack, ToggleButton, ToggleButtonGroup, Typography, useTheme } from "@mui/material";
 import type { ApexOptions } from "apexcharts";
+import { useState } from "react";
 import Chart from "react-apexcharts";
 import type { DashboardOverview } from "../../redux/slices/dashboardRedux/dashboardApi";
 import { fCurrency } from "../../utils/formatNumber";
@@ -8,6 +9,9 @@ const shortDate = (value: string) => new Intl.DateTimeFormat("en-LK", { day: "2-
 
 export function SalesTrendChart({ sales }: { sales: NonNullable<DashboardOverview["sales"]> }) {
   const theme = useTheme();
+  const [metric, setMetric] = useState<"revenue" | "transactions">("revenue");
+  const isRevenue = metric === "revenue";
+  const chartData = sales.trend.map((row) => isRevenue ? row.totalAmount : row.saleCount);
   const options: ApexOptions = {
     chart: { animations: { enabled: true, speed: 350 }, fontFamily: "Poppins, sans-serif", toolbar: { show: false }, zoom: { enabled: false } },
     colors: [theme.palette.primary.main],
@@ -16,20 +20,29 @@ export function SalesTrendChart({ sales }: { sales: NonNullable<DashboardOvervie
     grid: { borderColor: theme.palette.divider, strokeDashArray: 4 },
     markers: { hover: { sizeOffset: 3 }, size: sales.trend.length <= 7 ? 4 : 0 },
     stroke: { curve: "smooth", width: 3 },
-    tooltip: { theme: theme.palette.mode, y: { formatter: (value) => fCurrency(value) } },
+    tooltip: { theme: theme.palette.mode, y: { formatter: (value) => isRevenue ? fCurrency(value) : `${Math.round(value)} sales` } },
     xaxis: {
       axisBorder: { show: false }, axisTicks: { show: false }, categories: sales.trend.map(({ date }) => shortDate(date)),
       labels: { hideOverlappingLabels: true, style: { colors: theme.palette.text.secondary, fontSize: "11px" } },
     },
-    yaxis: { labels: { formatter: (value) => value >= 1_000 ? `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K` : String(Math.round(value)), style: { colors: theme.palette.text.secondary, fontSize: "11px" } } },
+    yaxis: { forceNiceScale: true, labels: { formatter: (value) => isRevenue && value >= 1_000 ? `${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}K` : String(Math.round(value)), style: { colors: theme.palette.text.secondary, fontSize: "11px" } } },
   };
   return <Card sx={{ border: 1, borderColor: "divider", height: "100%" }}>
     <CardContent sx={{ p: { xs: 1.75, sm: 2.25 }, "&:last-child": { pb: 1.5 } }}>
-      <Stack alignItems="flex-start" direction="row" justifyContent="space-between" mb={1} spacing={2}>
+      <Stack alignItems={{ xs: "stretch", sm: "flex-start" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" mb={1} spacing={1.25}>
         <Box><Typography fontWeight={900}>Sales trend</Typography><Typography color="text.secondary" fontSize={12}>Completed sales across the selected period</Typography></Box>
-        <Typography color="primary.main" fontSize={13} fontWeight={900}>{fCurrency(sales.totalAmount)}</Typography>
+        <ToggleButtonGroup
+          exclusive
+          onChange={(_, value: "revenue" | "transactions" | null) => value && setMetric(value)}
+          size="small"
+          value={metric}
+          sx={{ alignSelf: { sm: "flex-start" }, "& .MuiToggleButton-root": { fontSize: 11, fontWeight: 800, px: 1.25, py: 0.45, textTransform: "none" } }}
+        >
+          <ToggleButton value="revenue">Revenue</ToggleButton>
+          <ToggleButton value="transactions">Transactions</ToggleButton>
+        </ToggleButtonGroup>
       </Stack>
-      <Box sx={{ mx: { xs: -1, sm: 0 } }}><Chart height={285} options={options} series={[{ data: sales.trend.map(({ totalAmount }) => totalAmount), name: "Sales" }]} type="area" /></Box>
+      <Box sx={{ mx: { xs: -1, sm: 0 } }}><Chart height={285} options={options} series={[{ data: chartData, name: isRevenue ? "Revenue" : "Transactions" }]} type="area" /></Box>
     </CardContent>
   </Card>;
 }
