@@ -52,27 +52,27 @@ function InsightCard({ insight, onAction }: { insight: DashboardInsight; onActio
       height: "100%",
     })}
   >
-    <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", p: { xs: 1.5, sm: 1.75 }, "&:last-child": { pb: { xs: 1.5, sm: 1.75 } } }}>
+    <CardContent sx={{ display: "flex", flexDirection: "column", height: "100%", p: { xs: 1.15, sm: 1.75 }, "&:last-child": { pb: { xs: 1.15, sm: 1.75 } } }}>
       <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={1}>
-        <Chip color={severity.color} icon={severity.icon as ReactElement} label={severity.label} size="small" variant="outlined" />
-        <Stack alignItems="center" color="text.secondary" direction="row" spacing={0.5}>{domain.icon}<Typography fontSize={10.75} fontWeight={800}>{domain.label}</Typography></Stack>
+        <Chip color={severity.color} icon={severity.icon as ReactElement} label={severity.label} size="small" sx={{ height: { xs: 21, sm: 24 }, "& .MuiChip-label": { fontSize: { xs: 9.5, sm: 11 }, px: { xs: 0.65, sm: 1 } }, "& .MuiChip-icon": { fontSize: { xs: 14, sm: 16 } } }} variant="outlined" />
+        <Stack alignItems="center" color="text.secondary" direction="row" spacing={0.35}>{domain.icon}<Typography fontSize={{ xs: 9.5, sm: 10.75 }} fontWeight={800}>{domain.label}</Typography></Stack>
       </Stack>
 
-      <Stack alignItems="flex-start" direction="row" justifyContent="space-between" mt={1.35} spacing={1.5}>
-        <Typography fontSize={13.25} fontWeight={900} lineHeight={1.35}>{insight.title}</Typography>
-        <Box flexShrink={0} textAlign="right"><Typography color={`${severity.color}.main`} fontSize={16} fontWeight={900} lineHeight={1.2}>{metricValue(insight.metric)}</Typography><Typography color="text.secondary" fontSize={9.5}>{insight.metric.label}</Typography></Box>
+      <Stack alignItems="flex-start" direction="row" justifyContent="space-between" mt={{ xs: 0.85, sm: 1.35 }} spacing={1}>
+        <Typography fontSize={{ xs: 12.25, sm: 13.25 }} fontWeight={900} lineHeight={1.3} minWidth={0}>{insight.title}</Typography>
+        <Box flexShrink={0} textAlign="right"><Typography color={`${severity.color}.main`} fontSize={{ xs: 14, sm: 16 }} fontWeight={900} lineHeight={1.15}>{metricValue(insight.metric)}</Typography><Typography color="text.secondary" fontSize={{ xs: 8.75, sm: 9.5 }}>{insight.metric.label}</Typography></Box>
       </Stack>
-      <Typography color="text.secondary" fontSize={11.25} lineHeight={1.65} mt={0.8}>{insight.message}</Typography>
+      <Typography color="text.secondary" fontSize={{ xs: 10.25, sm: 11.25 }} lineHeight={{ xs: 1.45, sm: 1.65 }} mt={0.6} sx={{ WebkitBoxOrient: "vertical", WebkitLineClamp: { xs: 2, sm: "unset" }, display: { xs: "-webkit-box", sm: "block" }, overflow: "hidden" }}>{insight.message}</Typography>
 
       <Box flexGrow={1} />
-      <Divider sx={{ my: 1.2 }} />
-      <Typography color="text.secondary" fontSize={9.75} fontWeight={800} letterSpacing={0.3} textTransform="uppercase">Recommended action</Typography>
-      <Typography fontSize={10.75} lineHeight={1.55} mt={0.35}>{insight.action}</Typography>
-      {insight.actionState ? <Stack alignItems="flex-start" mt={1} spacing={0.35}><Chip color={insight.actionState === "resolved" ? "success" : "default"} label={insight.actionState === "resolved" ? "Resolved" : "Dismissed"} size="small" />{insight.actionNote ? <Typography color="text.secondary" fontSize={9.75}>Note: {insight.actionNote}</Typography> : null}</Stack> : null}
-      {onAction && !insight.actionState ? <Stack direction="row" gap={0.65} mt={1.1}><Button onClick={() => void onAction(insight, "resolved", "")} size="small" variant="outlined">Resolve</Button><Button color="inherit" onClick={() => void onAction(insight, "dismissed", "")} size="small">Dismiss</Button></Stack> : null}
-      <Stack alignItems="center" direction="row" flexWrap="wrap" gap={0.6} mt={1.1}>
-        <Chip label={`${insight.confidence === "rule" ? "Rule-based" : `${insight.confidence} confidence`}`} size="small" sx={{ height: 21, fontSize: 9.5 }} />
-        <Typography color="text.secondary" fontSize={9.5}>{insight.period}</Typography>
+      <Divider sx={{ my: { xs: 0.75, sm: 1.2 } }} />
+      <Typography color="text.secondary" fontSize={{ xs: 8.75, sm: 9.75 }} fontWeight={800} letterSpacing={0.25} textTransform="uppercase">Recommended action</Typography>
+      <Typography fontSize={{ xs: 10, sm: 10.75 }} lineHeight={{ xs: 1.45, sm: 1.55 }} mt={0.25} sx={{ WebkitBoxOrient: "vertical", WebkitLineClamp: { xs: 2, sm: "unset" }, display: { xs: "-webkit-box", sm: "block" }, overflow: "hidden" }}>{insight.action}</Typography>
+      {insight.actionState ? <Stack alignItems="flex-start" mt={{ xs: 0.65, sm: 1 }} spacing={0.35}><Chip color={insight.actionState === "resolved" ? "success" : "default"} label={insight.actionState === "resolved" ? "Resolved" : "Dismissed"} size="small" sx={{ height: 21, fontSize: 9.5 }} />{insight.actionNote ? <Typography color="text.secondary" fontSize={9.75}>Note: {insight.actionNote}</Typography> : null}</Stack> : null}
+      {onAction && !insight.actionState ? <Stack direction="row" gap={0.4} mt={{ xs: 0.65, sm: 1.1 }}><Button onClick={() => void onAction(insight, "resolved", "")} size="small" sx={{ fontSize: 10.5, minHeight: 27, px: 0.8, py: 0.25 }} variant="outlined">Resolve</Button><Button color="inherit" onClick={() => void onAction(insight, "dismissed", "")} size="small" sx={{ fontSize: 10.5, minHeight: 27, px: 0.8, py: 0.25 }}>Dismiss</Button></Stack> : null}
+      <Stack alignItems="center" direction="row" flexWrap="wrap" gap={0.5} mt={{ xs: 0.65, sm: 1.1 }}>
+        <Chip label={`${insight.confidence === "rule" ? "Rule-based" : `${insight.confidence} confidence`}`} size="small" sx={{ height: { xs: 19, sm: 21 }, fontSize: { xs: 8.75, sm: 9.5 } }} />
+        <Typography color="text.secondary" fontSize={{ xs: 8.75, sm: 9.5 }}>{insight.period}</Typography>
       </Stack>
     </CardContent>
   </Card>;

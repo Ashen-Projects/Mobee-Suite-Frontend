@@ -20,7 +20,7 @@ const LayoutContent = () => {
           transition: (theme) => theme.transitions.create("margin-left"),
         }}
       >
-        <Toolbar sx={{ minHeight: { xs: 70, sm: 78, md: 84 } }} />
+        <Toolbar sx={{ minHeight: { xs: 64, sm: 78, md: 84 } }} />
         <Box sx={{ maxWidth: 1536, minWidth: 0, mx: "auto", width: "100%" }}>
           <Outlet />
         </Box>

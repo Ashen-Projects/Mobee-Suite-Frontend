@@ -1,20 +1,18 @@
 import AddPhotoAlternateOutlinedIcon from "@mui/icons-material/AddPhotoAlternateOutlined";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import DoNotDisturbOnOutlinedIcon from "@mui/icons-material/DoNotDisturbOnOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
-import { Box, Button, Card, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, SwipeableDrawer, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Box, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, SwipeableDrawer, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "react-toastify";
-import { createProduct, updateProduct, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductImageInput, type ProductInput, type ProductListItem, type ProductStockLevel } from "../../redux/slices/productRedux/productRedux";
+import ProductImageUploadDialog, { type ProductFormImage } from "./ProductImageUploadDialog";
+import { createProduct, deleteProductImageUpload, updateProduct, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductImageInput, type ProductInput, type ProductListItem, type ProductStockLevel } from "../../redux/slices/productRedux/productRedux";
 import { exportBarTenderCsv, printBarcodes } from "../../utils/printBarcodes";
 
 type ProductKind = "simple" | "variable" | "variation";
-type FormImage = ProductImageInput & { clientId: string };
 type Props = {
   attributes: ProductAttribute[];
   categories: ProductCategory[];
@@ -29,7 +27,7 @@ type Props = {
 };
 type PrintableBarcode = { barcode: string; productName: string | null; productSku: string | null };
 
-const emptyImages = (): FormImage[] => [];
+const emptyImages = (): ProductFormImage[] => [];
 
 type VariationDraft = { lowestSellingPrice: string; mrpPrice: string; optionIds: number[]; sku: string };
 
@@ -48,7 +46,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
   const [isAvailableOnWeb, setIsAvailableOnWeb] = useState(false);
   const [iconUrl, setIconUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [images, setImages] = useState<FormImage[]>(emptyImages);
+  const [images, setImages] = useState<ProductFormImage[]>(emptyImages);
   const [optionByAttribute, setOptionByAttribute] = useState<Record<number, number | "">>({});
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
@@ -60,9 +58,13 @@ export default function ProductFormDialog({ attributes, categories, initialParen
   const [variationDrafts, setVariationDrafts] = useState<Record<number, VariationDraft>>({});
   const [createdBarcode, setCreatedBarcode] = useState<PrintableBarcode | null>(null);
   const [minimumStockByLocation, setMinimumStockByLocation] = useState<Record<number, string>>({});
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const isClosingRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
+    isClosingRef.current = false;
+    setImageDialogOpen(false);
     setTab(product?.hasVariations ? 0 : 1);
     const nextKind: ProductKind = product?.parentId || (!product && initialParentId) ? "variation" : product?.hasVariations ? "variable" : "simple";
     setKind(nextKind);
@@ -79,7 +81,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
     setIsActive(product?.isActive ?? true);
     setIconUrl(product?.iconUrl ?? "");
     setLogoUrl(product?.logoUrl ?? "");
-    setImages(product?.images.map(({ altText, id, isPrimary, priority: imagePriority, url }) => ({ altText, clientId: String(id), isPrimary, priority: imagePriority, url })) ?? emptyImages());
+    setImages(product?.images.map(({ altText, cloudinaryPublicId, id, isPrimary, priority: imagePriority, url }) => ({ altText, clientId: String(id), cloudinaryPublicId: cloudinaryPublicId ?? null, isPersisted: true, isPrimary, priority: imagePriority, url })) ?? emptyImages());
     setOptionByAttribute(Object.fromEntries(product?.options.map(({ attributeId, optionId }) => [attributeId, optionId]) ?? []));
     setMetaTitle(product?.seo?.metaTitle ?? "");
     setMetaDescription(product?.seo?.metaDescription ?? "");
@@ -109,6 +111,27 @@ export default function ProductFormDialog({ attributes, categories, initialParen
 
   const setPrimaryImage = (index: number) => setImages((current) => current.map((image, imageIndex) => ({ ...image, isPrimary: imageIndex === index })));
   const updateImage = (index: number, values: Partial<ProductImageInput>) => setImages((current) => current.map((image, imageIndex) => imageIndex === index ? { ...image, ...values } : image));
+  const removeImage = async (index: number) => {
+    const image = images[index];
+    if (!image || image.uploading) return;
+    setImages((current) => {
+      const remaining = current.filter((_, imageIndex) => imageIndex !== index);
+      const hasPrimary = remaining.some(({ isPrimary }) => isPrimary);
+      return remaining.map((item, imageIndex) => ({ ...item, isPrimary: hasPrimary ? item.isPrimary : imageIndex === 0, priority: imageIndex }));
+    });
+    if (!image.isPersisted && image.cloudinaryPublicId) {
+      try { await deleteProductImageUpload(image.cloudinaryPublicId); }
+      catch { toast.warning("The temporary image was removed from this product, but could not be cleaned up from Cloudinary."); }
+    }
+  };
+
+  const closeEditor = () => {
+    isClosingRef.current = true;
+    setImageDialogOpen(false);
+    const transientPublicIds = images.filter(({ cloudinaryPublicId, isPersisted }) => !isPersisted && cloudinaryPublicId).map(({ cloudinaryPublicId }) => cloudinaryPublicId as string);
+    void Promise.all(transientPublicIds.map((publicId) => deleteProductImageUpload(publicId).catch(() => undefined)));
+    onClose();
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -137,7 +160,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       description: description.trim() || null,
       hasVariations: kind === "variable",
       iconUrl: iconUrl.trim() || null,
-      images: productImages.map((image) => ({ altText: image.altText?.trim() || null, isPrimary: image.isPrimary, priority: image.priority, url: image.url.trim() })),
+      images: productImages.map((image) => ({ altText: image.altText?.trim() || null, cloudinaryPublicId: image.cloudinaryPublicId ?? null, isPrimary: image.isPrimary, priority: image.priority, url: image.url.trim() })),
       isActive,
       isAvailableOnWeb,
       logoUrl: logoUrl.trim() || null,
@@ -223,7 +246,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
   <SwipeableDrawer
     anchor="bottom"
     disableSwipeToOpen
-    onClose={() => !saving && onClose()}
+    onClose={() => !saving && closeEditor()}
     onOpen={() => undefined}
     open={open}
     PaperProps={{
@@ -248,7 +271,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
         <Stack alignItems="center" direction="row" gap={1}>
           <FormControlLabel control={<Switch checked={isActive} disabled={saving} onChange={(event) => setIsActive(event.target.checked)} />} label={isActive ? "Active" : "Inactive"} sx={{ display: { xs: "none", sm: "flex" }, mr: 0.5 }} />
           <Button disabled={saving} startIcon={<SaveRoundedIcon />} type="submit" variant="contained">{saving ? "Saving…" : product ? "Save" : "Create"}</Button>
-          <IconButton aria-label="Close product editor" disabled={saving} onClick={onClose}><CloseRoundedIcon /></IconButton>
+          <IconButton aria-label="Close product editor" disabled={saving} onClick={closeEditor}><CloseRoundedIcon /></IconButton>
         </Stack>
       </Stack>
       <Divider />
@@ -275,7 +298,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}><TextField fullWidth label="Display priority" onChange={(event) => setPriority(Math.max(0, Number(event.target.value)))} slotProps={{ htmlInput: { min: 0 } }} type="text" value={priority} /><FormControlLabel control={<Switch checked={isAvailableOnWeb} onChange={(event) => setIsAvailableOnWeb(event.target.checked)} />} label="Available on website" /></Stack>
         </Stack>
       </Stack></Card>
-      <Card sx={{ ...panelSx, alignSelf: "start", position: { lg: "sticky" }, top: 0 }}><Stack spacing={2}><Box><Typography fontWeight={700} variant="h6">Image Gallery</Typography><Typography color="text.secondary" variant="body2">Upload and manage the product photos.</Typography></Box><Stack alignItems="center" direction="row" justifyContent="space-between"><Typography fontWeight={700} variant="h6">Product Images</Typography><Button onClick={() => setImages((current) => [...current, { altText: null, clientId: crypto.randomUUID(), isPrimary: current.length === 0, priority: current.length, url: "" }])} startIcon={<AddPhotoAlternateOutlinedIcon />} variant="contained">New</Button></Stack>{images.map((image, index) => <CardImageRow image={image} index={index} key={image.clientId} onDelete={() => setImages((current) => current.filter((_, imageIndex) => imageIndex !== index))} onPrimary={() => setPrimaryImage(index)} onUpdate={(values) => updateImage(index, values)} />)}{!images.length ? <Box sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", display: "flex", justifyContent: "center", minHeight: 210, p: 3, textAlign: "center" }}><Typography color="text.secondary" variant="body2">No images uploaded yet.<br />Add an image URL with the New button.</Typography></Box> : null}</Stack></Card>
+      <Card sx={{ ...panelSx, alignSelf: "start", position: { lg: "sticky" }, top: 0 }}><Stack spacing={2}><Box><Typography fontWeight={700} variant="h6">Image Gallery</Typography><Typography color="text.secondary" variant="body2">Select, preview, and upload product images securely to Cloudinary.</Typography></Box><Stack alignItems="center" direction="row" justifyContent="space-between"><Box><Typography fontWeight={800} variant="body2">{images.length ? `${images.length} product image${images.length === 1 ? "" : "s"}` : "No product images"}</Typography><Typography color="text.secondary" variant="caption">JPEG, PNG, or WebP · Up to 5 MB</Typography></Box><Button onClick={() => setImageDialogOpen(true)} startIcon={<AddPhotoAlternateOutlinedIcon />} variant="contained">Manage</Button></Stack>{images.length ? <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>{images.slice(0, 6).map((image, index) => image.url ? <Box alt={image.altText ?? `Product image ${index + 1}`} component="img" key={image.clientId} src={image.url} sx={{ border: 1, borderColor: image.isPrimary ? "primary.main" : "divider", borderRadius: 1.5, height: 82, objectFit: "cover", width: "100%" }} /> : <Box key={image.clientId} sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 1.5, display: "flex", height: 82, justifyContent: "center" }}><CircularProgress size={20} /></Box>)}</Box> : <Box sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", display: "flex", justifyContent: "center", minHeight: 160, p: 2, textAlign: "center" }}><Stack alignItems="center" spacing={1}><AddPhotoAlternateOutlinedIcon color="primary" /><Typography color="text.secondary" variant="body2">Choose images to preview before uploading.</Typography><Button onClick={() => setImageDialogOpen(true)} size="small" variant="outlined">Choose images</Button></Stack></Box>}</Stack></Card>
       </Box> : null}
 
       {tab === 0 ? <Card sx={{ ...panelSx, p: { xs: 1.5, md: 2 } }}><Stack spacing={2}>
@@ -307,6 +330,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       </Box>
     </Box>
   </SwipeableDrawer>
+  <ProductImageUploadDialog images={images} onChange={setImages} onClose={() => setImageDialogOpen(false)} onDelete={removeImage} onSetPrimary={setPrimaryImage} onUpdate={updateImage} open={imageDialogOpen} />
   <Dialog fullWidth maxWidth="sm" open={Boolean(createdBarcode)} onClose={closeAfterTestBarcode}>
     <DialogTitle>Print test barcode?</DialogTitle>
     <DialogContent>
@@ -322,8 +346,4 @@ export default function ProductFormDialog({ attributes, categories, initialParen
     </DialogActions>
   </Dialog>
   </>;
-}
-
-function CardImageRow({ image, index, onDelete, onPrimary, onUpdate }: { image: ProductImageInput; index: number; onDelete: () => void; onPrimary: () => void; onUpdate: (values: Partial<ProductImageInput>) => void }) {
-  return <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1.5 }}><Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} spacing={1.5}>{image.url ? <Box alt={image.altText ?? `Product image ${index + 1}`} component="img" src={image.url} sx={{ bgcolor: (theme) => alpha(theme.palette.background.default, .6), borderRadius: 1.5, height: 64, objectFit: "cover", width: 64 }} /> : null}<TextField fullWidth label={`Image ${index + 1} URL`} onChange={(event) => onUpdate({ url: event.target.value })} value={image.url} /><TextField fullWidth label="Alt text" onChange={(event) => onUpdate({ altText: event.target.value })} value={image.altText ?? ""} /><FormControlLabel control={<Checkbox checked={image.isPrimary} onChange={onPrimary} />} label="Primary" sx={{ flexShrink: 0 }} /><IconButton aria-label={`Remove image ${index + 1}`} color="error" onClick={onDelete}><DeleteOutlineRoundedIcon /></IconButton></Stack></Box>;
 }

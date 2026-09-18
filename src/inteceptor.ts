@@ -150,7 +150,6 @@ export const uploadFile = async <TResponse>(
       ...config,
       headers: {
         ...config.headers,
-        "Content-Type": "multipart/form-data",
       },
     },
   );

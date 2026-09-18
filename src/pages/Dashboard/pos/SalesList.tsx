@@ -2,14 +2,14 @@ import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, Stack, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { DataGrid, GridFooter, type GridColDef } from "@mui/x-data-grid";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
 import AdvancedDateRangeFilter from "../../../components/common/AdvancedDateRangeFilter";
 import PageMeta from "../../../components/common/PageMeta";
-import { getDailySalesSummary, getSale, getSales, type DailySalesSummaryResponse, type SaleDetail, type SaleListItem } from "../../../redux/slices/posRedux/saleRedux";
+import { getDailySalesSummary, getSale, getSales, type DailySalesSummaryResponse, type PaymentMethod, type SaleDetail, type SaleListItem } from "../../../redux/slices/posRedux/saleRedux";
 import { fCurrency } from "../../../utils/formatNumber";
 import { printSaleReceipt } from "../../../utils/printSaleReceipt";
 import { PATH_DASHBOARD } from "../../../routes/paths";
@@ -21,9 +21,12 @@ const toDateInput = (date: Date) => {
 };
 const today = toDateInput(new Date());
 const monthStart = toDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+type PaymentMethodFilter = "all" | PaymentMethod | "finance" | "mobile";
 
 export default function SalesList() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [searchParams] = useSearchParams();
   const isPosMode = searchParams.get("mode") === "pos";
   const [rows, setRows] = useState<SaleListItem[]>([]);
@@ -33,6 +36,7 @@ export default function SalesList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [fromDate, setFromDate] = useState(monthStart);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodFilter>("all");
   const [summary, setSummary] = useState<DailySalesSummaryResponse | null>(null);
   const [status, setStatus] = useState("all");
   const [toDate, setToDate] = useState(today);
@@ -42,21 +46,21 @@ export default function SalesList() {
 
   const load = useCallback(async () => {
     try {
-      const response = await getSales({ fromDate, page: page + 1, pageSize, search: debouncedSearch, status, toDate });
+      const response = await getSales({ fromDate, page: page + 1, pageSize, paymentMethod, search: debouncedSearch, status, toDate });
       setRows(response.items);
       setTotal(response.pagination.total);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to load sales.");
     }
-  }, [debouncedSearch, fromDate, page, pageSize, status, toDate]);
+  }, [debouncedSearch, fromDate, page, pageSize, paymentMethod, status, toDate]);
 
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    void getDailySalesSummary({ fromDate, toDate })
+    void getDailySalesSummary({ fromDate, paymentMethod, toDate })
       .then(setSummary)
       .catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load daily sale summary."));
-  }, [fromDate, toDate]);
+  }, [fromDate, paymentMethod, toDate]);
 
   const openSale = async (id: number) => {
     try { setDetail(await getSale(id)); }
@@ -64,14 +68,14 @@ export default function SalesList() {
   };
 
   const columns = useMemo<GridColDef<SaleListItem>[]>(() => [
-    { field: "invoiceNo", headerName: "Invoice", minWidth: 190, renderCell: ({ row }) => <Stack justifyContent="center" sx={{ minWidth: 0 }}><Typography fontWeight={800} noWrap variant="body2">{row.invoiceNo}</Typography><Typography color="text.secondary" noWrap variant="caption">{new Intl.DateTimeFormat("en-LK", { dateStyle: "medium", timeStyle: "short" }).format(new Date(Number(row.timestamp)))}</Typography></Stack> },
-    { field: "customerName", flex: 1, headerName: "Customer", minWidth: 220, renderCell: ({ row }) => <Stack justifyContent="center" sx={{ minWidth: 0 }}><Typography fontWeight={700} noWrap variant="body2">{row.customerName || "Walk-in Customer"}</Typography><Typography color="text.secondary" noWrap variant="caption">{row.locationName}</Typography></Stack> },
-    { field: "totalAmount", headerName: "Total", minWidth: 150, renderCell: ({ row }) => <Typography fontWeight={800} variant="body2">{fCurrency(Number(row.totalAmount))}</Typography> },
+    { field: "invoiceNo", headerName: "Invoice", minWidth: isMobile ? 145 : 190, renderCell: ({ row }) => <Stack justifyContent="center" sx={{ minWidth: 0 }}><Typography fontWeight={800} noWrap variant="body2">{row.invoiceNo}</Typography><Typography color="text.secondary" noWrap variant="caption">{new Intl.DateTimeFormat("en-LK", { dateStyle: "medium", timeStyle: "short" }).format(new Date(Number(row.timestamp)))}</Typography></Stack> },
+    { field: "customerName", flex: 1, headerName: "Customer", minWidth: isMobile ? 120 : 220, renderCell: ({ row }) => <Stack justifyContent="center" sx={{ minWidth: 0 }}><Typography fontWeight={700} noWrap variant="body2">{row.customerName || "Walk-in Customer"}</Typography><Typography color="text.secondary" noWrap variant="caption">{row.locationName}</Typography></Stack> },
+    { field: "totalAmount", headerName: "Total", minWidth: isMobile ? 94 : 150, renderCell: ({ row }) => <Typography fontWeight={800} noWrap variant="body2">{fCurrency(Number(row.totalAmount))}</Typography> },
     { field: "paidAmount", headerName: "Paid", minWidth: 140, renderCell: ({ row }) => <Typography color="text.secondary" variant="body2">{fCurrency(Number(row.paidAmount))}</Typography> },
     { field: "status", headerName: "Status", minWidth: 120, renderCell: ({ value }) => <Chip color={value === "completed" ? "success" : "default"} label={String(value)} size="small" /> },
     { field: "timestamp", headerName: "Date", minWidth: 150, valueFormatter: (value) => new Intl.DateTimeFormat("en-LK", { dateStyle: "medium" }).format(new Date(Number(value))) },
     { field: "actions", align: "center", headerName: "", minWidth: 80, sortable: false, renderCell: ({ row }) => <Tooltip title="Print receipt"><IconButton onClick={(event) => { event.stopPropagation(); void getSale(row.id).then(printSaleReceipt); }} size="small"><LocalPrintshopOutlinedIcon /></IconButton></Tooltip> },
-  ], []);
+  ], [isMobile]);
   const SalesTableFooter = useCallback(() => (
     <Box>
       <Stack
@@ -118,9 +122,12 @@ export default function SalesList() {
           <TextField onChange={(event) => { setStatus(event.target.value); setPage(0); }} select SelectProps={{ native: true }} size="small" value={status}>
             <option value="all">All statuses</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="returned">Returned</option>
           </TextField>
+          <TextField label="Payment method" onChange={(event) => { setPaymentMethod(event.target.value as PaymentMethodFilter); setPage(0); }} select SelectProps={{ native: true }} size="small" value={paymentMethod}>
+            <option value="all">All payments</option><option value="cash">Cash</option><option value="card">Card</option><option value="bankTransfer">Bank transfer</option><option value="finance">Finance</option><option value="mobile">Mobile payment</option>
+          </TextField>
         </Stack>
         <Box sx={{ overflowX: "auto" }}>
-          <DataGrid columns={columns} disableColumnMenu disableRowSelectionOnClick getRowHeight={() => 58} onPaginationModelChange={(model) => { setPage(model.page); setPageSize(model.pageSize); }} onRowClick={({ row }) => void openSale(row.id)} pageSizeOptions={PAGE_SIZE_OPTIONS} paginationMode="server" paginationModel={{ page, pageSize }} rowCount={total} rows={rows} slots={{ footer: SalesTableFooter }} sx={{ border: 0, cursor: "pointer", minHeight: 610, minWidth: { xs: 760, md: 0 }, "& .MuiDataGrid-cell": { alignItems: "center", display: "flex" }, "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within": { outline: "none" } }} />
+          <DataGrid columnVisibilityModel={isMobile ? { actions: false, paidAmount: false, status: false, timestamp: false } : undefined} columns={columns} disableColumnMenu disableRowSelectionOnClick getRowHeight={() => isMobile ? 62 : 58} onPaginationModelChange={(model) => { setPage(model.page); setPageSize(model.pageSize); }} onRowClick={({ row }) => void openSale(row.id)} pageSizeOptions={PAGE_SIZE_OPTIONS} paginationMode="server" paginationModel={{ page, pageSize }} rowCount={total} rows={rows} slots={{ footer: SalesTableFooter }} sx={{ border: 0, cursor: "pointer", minHeight: { xs: 510, sm: 610 }, minWidth: 0, "& .MuiDataGrid-cell": { alignItems: "center", display: "flex" }, "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within": { outline: "none" } }} />
         </Box>
       </Card>
     </Stack>

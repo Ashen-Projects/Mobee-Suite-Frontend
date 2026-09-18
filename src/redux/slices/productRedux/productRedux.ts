@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { get, patch, post } from "../../../inteceptor";
 import { dispatch } from "../../store";
+import { deleteMediaImage, uploadMediaImage, type CloudinaryUploadedImage } from "../../../utils/mediaImageUpload";
 
 export type ProductCategory = {
   description: string | null;
@@ -59,6 +60,7 @@ export type ProductAttribute = {
 
 export type ProductImageInput = {
   altText: string | null;
+  cloudinaryPublicId?: string | null;
   isPrimary: boolean;
   priority: number;
   url: string;
@@ -143,6 +145,8 @@ export type ProductListResponse = {
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 };
 
+export type UploadedProductImage = CloudinaryUploadedImage;
+
 type ProductState = {
   attributes: ProductAttribute[];
   categories: ProductCategory[];
@@ -205,6 +209,14 @@ export const updateProduct = async (id: number, input: Partial<Omit<ProductInput
 
 export const updateProductStatus = async (id: number, isActive: boolean): Promise<ProductDetail> =>
   (await patch<ProductDetail>(`products/${id}/status`, { isActive }, undefined, false)).data;
+
+export const uploadProductImage = async (file: File, onProgress?: (progress: number) => void): Promise<UploadedProductImage> => {
+  return uploadMediaImage(file, "mobee/products", onProgress);
+};
+
+export const deleteProductImageUpload = async (publicId: string): Promise<void> => {
+  await deleteMediaImage("mobee/products", publicId);
+};
 
 export const getProductCategories = async (query: Record<string, unknown> = {}): Promise<ProductCategory[]> =>
   commit(get<ProductCategory[]>("products/categories", query).then((response) => response.data), productSlice.actions.categoriesReceived);

@@ -1,8 +1,21 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { get, patch, post } from "../../../inteceptor";
 import { dispatch } from "../../store";
+import { deleteMediaImage, uploadMediaImage, type MediaImageAsset } from "../../../utils/mediaImageUpload";
 
 export type RepairStatus = "received" | "inspection" | "waitingParts" | "inProgress" | "completed" | "delivered" | "cancelled";
+
+export type RepairPhotoAsset = MediaImageAsset;
+
+export type RepairPhotoInput = { cloudinaryPublicId: string; fileName: string };
+
+export type RepairDocument = {
+  documentType: "intakePhoto" | "inspectionPhoto" | "estimate" | "approval" | "repairPhoto" | "deliveryProof" | "other";
+  fileName: string;
+  fileUrl: string;
+  id: number;
+  timestamp: number;
+};
 
 export type RepairJobListItem = {
   customerName: string;
@@ -27,6 +40,7 @@ export type RepairJobDetail = RepairJobListItem & {
   problemDescription: string;
   publicStatusPath: string;
   publicStatusToken: string;
+  documents: RepairDocument[];
   history: Array<{ id: number; newStatus: string; note: string | null; oldStatus: string | null; timestamp: number; userName: string }>;
 };
 
@@ -35,6 +49,7 @@ export type RepairJobInput = {
   customer: { id?: number; name?: string; phone?: string };
   deviceName: string;
   estimatedCost: number;
+  intakePhotos?: RepairPhotoInput[];
   problemDescription: string;
   serialImei?: string | null;
 };
@@ -54,6 +69,7 @@ export type PublicRepairStatus = {
   statusLabel: string;
   timestamp: number;
   timeline: Array<{ active: boolean; completed: boolean; label: string; status: RepairStatus; timestamp: number | null }>;
+  inspectionPhotos: Array<{ fileUrl: string; timestamp: number }>;
 };
 
 type State = { error: string | null; items: RepairJobListItem[]; pagination: RepairListResponse["pagination"] };
@@ -94,8 +110,16 @@ export const getRepairJob = async (id: number) => (await get<RepairJobDetail>(`r
 export const createRepairJob = async (input: RepairJobInput) =>
   (await post<RepairJobDetail, RepairJobInput>("repairs", input, undefined, false)).data;
 
-export const updateRepairJobStatus = async (id: number, input: { note?: string; status: RepairStatus }) =>
+export const updateRepairJobStatus = async (id: number, input: { inspectionPhotos?: RepairPhotoInput[]; note?: string; status: RepairStatus }) =>
   (await patch<RepairJobDetail, typeof input>(`repairs/${id}/status`, input, undefined, false)).data;
+
+export const uploadRepairImage = async (file: File): Promise<{ publicId: string; url: string }> => {
+  return uploadMediaImage(file, "mobee/repairs");
+};
+
+export const deleteRepairImageUpload = async (publicId: string): Promise<void> => {
+  await deleteMediaImage("mobee/repairs", publicId);
+};
 
 export const getPublicRepairStatus = async (query: { jobNo: string; token: string }) =>
   (await get<PublicRepairStatus>("repair-status", query, undefined, undefined, { trackLoading: false })).data;

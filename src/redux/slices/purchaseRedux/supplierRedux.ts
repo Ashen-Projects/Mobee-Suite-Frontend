@@ -2,6 +2,8 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { get, patch, post, put } from "../../../inteceptor";
 import { dispatch } from "../../store";
 
+export type SupplierPaymentMethod = "cash" | "bankTransfer" | "cheque" | "card";
+
 export type SupplierProduct = {
   id: number;
   isActive: boolean;
@@ -27,6 +29,7 @@ export type Supplier = {
   id: number;
   isActive: boolean;
   name: string;
+  preferredPaymentMethod: SupplierPaymentMethod;
   paymentTermDays: number;
   phone: string | null;
   productCount: number;
@@ -42,6 +45,7 @@ export type SupplierInput = {
   email: string | null;
   isActive: boolean;
   name: string;
+  preferredPaymentMethod: SupplierPaymentMethod;
   paymentTermDays: number;
   phone: string | null;
 };
