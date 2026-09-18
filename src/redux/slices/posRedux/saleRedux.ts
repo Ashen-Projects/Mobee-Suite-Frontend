@@ -133,5 +133,5 @@ export const getSales = async (query: Record<string, unknown>): Promise<SaleList
 
 export const getSale = async (id: number) => (await get<SaleDetail>(`sales/${id}`)).data;
 
-export const getDailySalesSummary = async (query: { fromDate: string; toDate: string }) =>
+export const getDailySalesSummary = async (query: { fromDate: string; paymentMethod?: "all" | PaymentMethod | "finance" | "mobile"; toDate: string }) =>
   (await get<DailySalesSummaryResponse>("sales/summary/daily", query, undefined, undefined, { trackLoading: false })).data;

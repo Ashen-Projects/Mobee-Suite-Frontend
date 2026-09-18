@@ -34,7 +34,7 @@ export const createMobeeTheme = (mode: PaletteMode) =>
         styleOverrides: { root: { borderRadius: 8 } },
       },
       MuiCard: {
-        styleOverrides: { root: { backgroundImage: "none", borderRadius: 16, boxShadow: mode === "light" ? "0 0 2px rgba(145, 158, 171, 0.2), 0 12px 24px -4px rgba(145, 158, 171, 0.12)" : "0 0 2px rgba(0, 0, 0, 0.24), 0 12px 24px -4px rgba(0, 0, 0, 0.24)" } },
+        styleOverrides: { root: { "@media (max-width: 599.95px)": { borderRadius: 12 }, backgroundImage: "none", borderRadius: 16, boxShadow: mode === "light" ? "0 0 2px rgba(145, 158, 171, 0.2), 0 12px 24px -4px rgba(145, 158, 171, 0.12)" : "0 0 2px rgba(0, 0, 0, 0.24), 0 12px 24px -4px rgba(0, 0, 0, 0.24)" } },
       },
       MuiCssBaseline: {
         styleOverrides: {
@@ -143,10 +143,24 @@ export const createMobeeTheme = (mode: PaletteMode) =>
               padding: "12px 16px 16px",
             },
             ".MuiButton-root": {
+              fontSize: 12,
               minHeight: 38,
             },
+            ".MuiCardContent-root": {
+              padding: 16,
+            },
             ".MuiDataGrid-root": {
-              minHeight: "420px",
+              minHeight: "380px",
+            },
+            ".MuiDataGrid-virtualScroller": {
+              minHeight: "250px",
+            },
+            ".MuiDataGrid-root .MuiDataGrid-row": {
+              maxHeight: "50px !important",
+              minHeight: "50px !important",
+            },
+            ".MuiDataGrid-root .MuiDataGrid-cell": {
+              fontSize: 11.5,
             },
             ".MuiDataGrid-root .MuiDataGrid-footerContainer .MuiTablePagination-displayedRows": {
               marginLeft: 4,

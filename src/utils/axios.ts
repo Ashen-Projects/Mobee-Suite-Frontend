@@ -43,6 +43,13 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
+  // The API client defaults to JSON. Clear that default before Axios transforms a
+  // FormData payload; otherwise it serializes the form as JSON and Multer cannot
+  // receive the uploaded file.
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    config.headers.setContentType(null);
+  }
+
   if (config.trackLoading !== false) {
     config.loadingStartedAt = Date.now();
     config.loadingTracked = true;

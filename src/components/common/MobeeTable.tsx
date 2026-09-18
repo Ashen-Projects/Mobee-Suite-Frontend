@@ -61,8 +61,8 @@ export default function MobeeTable<T>({
     {(searchPlaceholder || filters || actions) ? <Stack
       alignItems={{ xs: "stretch", md: "center" }}
       direction={{ xs: "column", md: "row" }}
-      gap={1.5}
-      sx={{ p: 1.5 }}
+      gap={{ xs: 1, sm: 1.5 }}
+      sx={{ p: { xs: 1, sm: 1.5 } }}
     >
       {searchPlaceholder ? <TextField
         fullWidth
@@ -76,20 +76,23 @@ export default function MobeeTable<T>({
     </Stack> : null}
     <TableContainer sx={{ borderTop: searchPlaceholder || filters || actions ? 1 : 0, borderColor: "divider", overflowX: "auto" }}>
       <Table sx={{
-        minWidth,
+        minWidth: { xs: Math.min(minWidth, 640), sm: minWidth },
         "& th": {
           bgcolor: "action.hover",
           borderColor: "divider",
           color: "text.primary",
-          fontSize: 13,
+          fontSize: { xs: 11, sm: 13 },
           fontWeight: 900,
           lineHeight: 1.3,
-          py: 1.45,
+          px: { xs: 1.25, sm: 2 },
+          py: { xs: 1, sm: 1.45 },
           whiteSpace: "nowrap",
         },
         "& td": {
           borderColor: "rgba(255,255,255,0.08)",
-          py: 1.2,
+          fontSize: { xs: 12, sm: 13 },
+          px: { xs: 1.25, sm: 2 },
+          py: { xs: 0.9, sm: 1.2 },
           verticalAlign: "middle",
         },
       }}>
@@ -114,7 +117,7 @@ export default function MobeeTable<T>({
             {columns.map((column) => <TableCell align={column.align} key={column.key} sx={column.sx}>{column.render(row)}</TableCell>)}
           </TableRow>)}
           {!rows.length ? <TableRow>
-            <TableCell colSpan={columns.length} sx={{ borderBottom: 0, py: 8 }}>
+            <TableCell colSpan={columns.length} sx={{ borderBottom: 0, py: { xs: 5, sm: 8 } }}>
               <Stack alignItems="center" spacing={1}>
                 <SearchRoundedIcon color="disabled" sx={{ fontSize: 42 }} />
                 <Typography fontWeight={900}>{loading ? "Loading…" : emptyTitle}</Typography>

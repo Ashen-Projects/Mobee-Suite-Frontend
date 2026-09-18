@@ -8,8 +8,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
 import PageMeta from "../../../components/common/PageMeta";
+import RepairPhotoUploader from "../../../components/repairs/RepairPhotoUploader";
 import { searchSaleCustomers, type SaleCustomer } from "../../../redux/slices/posRedux/saleRedux";
-import { createRepairJob, getRepairJob, getRepairJobs, updateRepairJobStatus, type RepairJobDetail, type RepairJobInput, type RepairJobListItem, type RepairStatus } from "../../../redux/slices/repairRedux/repairRedux";
+import { createRepairJob, deleteRepairImageUpload, getRepairJob, getRepairJobs, updateRepairJobStatus, type RepairJobDetail, type RepairJobInput, type RepairJobListItem, type RepairPhotoAsset, type RepairStatus } from "../../../redux/slices/repairRedux/repairRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
 import { fCurrency } from "../../../utils/formatNumber";
 import { printRepairJobReceipt } from "../../../utils/printRepairJobReceipt";
@@ -55,6 +56,10 @@ export default function RepairJobs() {
   const [detail, setDetail] = useState<RepairJobDetail | null>(null);
   const [statusNote, setStatusNote] = useState("");
   const [newStatus, setNewStatus] = useState<RepairStatus>("received");
+  const [intakePhotos, setIntakePhotos] = useState<RepairPhotoAsset[]>([]);
+  const [inspectionPhotos, setInspectionPhotos] = useState<RepairPhotoAsset[]>([]);
+  const [isIntakeUploading, setIsIntakeUploading] = useState(false);
+  const [isInspectionUploading, setIsInspectionUploading] = useState(false);
   const pageTitle = isPosMode ? "Create Repair Job" : "Repair Jobs";
   const hasCustomer = Boolean(
     selectedCustomer?.id ||
@@ -63,8 +68,35 @@ export default function RepairJobs() {
   const canCreateRepair = Boolean(
     hasCustomer &&
     form.deviceName.trim() &&
-    form.problemDescription.trim(),
+    form.problemDescription.trim() &&
+    !isIntakeUploading,
   );
+
+  const discardUploadedPhotos = (photos: RepairPhotoAsset[]) => {
+    if (!photos.length) return;
+    void Promise.all(photos.map(async ({ publicId }) => {
+      try {
+        await deleteRepairImageUpload(publicId);
+      } catch {
+        // The asset expires from the draft when the user cancels. Failed cleanup
+        // never interrupts the cashier's workflow and can be retried by support.
+      }
+    }));
+  };
+
+  const closeCreateDialog = () => {
+    if (saving || isIntakeUploading) return;
+    discardUploadedPhotos(intakePhotos);
+    setIntakePhotos([]);
+    setOpen(false);
+  };
+
+  const closeDetailDialog = () => {
+    if (saving || isInspectionUploading) return;
+    discardUploadedPhotos(inspectionPhotos);
+    setInspectionPhotos([]);
+    setDetail(null);
+  };
 
   const load = async () => {
     try {
@@ -111,6 +143,7 @@ export default function RepairJobs() {
         customer,
         deviceName,
         estimatedCost: amount(form.estimatedCost),
+        intakePhotos: intakePhotos.map(({ fileName, publicId }) => ({ cloudinaryPublicId: publicId, fileName })),
         problemDescription,
         serialImei: form.serialImei.trim() || null,
       };
@@ -119,6 +152,8 @@ export default function RepairJobs() {
       setForm(emptyForm);
       setCustomerSearch("");
       setSelectedCustomer(null);
+      setIntakePhotos([]);
+      setIsIntakeUploading(false);
       setDetail(job);
       toast.success(`Repair job ${job.jobNo} created.`);
       printRepairJobReceipt(job);
@@ -135,6 +170,8 @@ export default function RepairJobs() {
       const job = await getRepairJob(id);
       setNewStatus(job.status);
       setStatusNote("");
+      setInspectionPhotos([]);
+      setIsInspectionUploading(false);
       setDetail(job);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to open repair job.");
@@ -143,11 +180,21 @@ export default function RepairJobs() {
 
   const saveStatus = async () => {
     if (!detail) return;
+    if (newStatus === "inspection" && !inspectionPhotos.length) {
+      toast.error("Add at least one inspection photo before moving this repair to Inspection.");
+      return;
+    }
     setSaving(true);
     try {
-      const updated = await updateRepairJobStatus(detail.id, { note: statusNote.trim() || undefined, status: newStatus });
+      const updated = await updateRepairJobStatus(detail.id, {
+        inspectionPhotos: newStatus === "inspection" ? inspectionPhotos.map(({ fileName, publicId }) => ({ cloudinaryPublicId: publicId, fileName })) : [],
+        note: statusNote.trim() || undefined,
+        status: newStatus,
+      });
       setDetail(updated);
       setStatusNote("");
+      setInspectionPhotos([]);
+      setIsInspectionUploading(false);
       toast.success("Repair status updated.");
       void load();
     } catch (error) {
@@ -155,6 +202,15 @@ export default function RepairJobs() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const changeStatus = (nextStatus: RepairStatus) => {
+    if (isInspectionUploading) return;
+    if (nextStatus !== "inspection" && inspectionPhotos.length) {
+      discardUploadedPhotos(inspectionPhotos);
+      setInspectionPhotos([]);
+    }
+    setNewStatus(nextStatus);
   };
 
   return <>
@@ -215,7 +271,7 @@ export default function RepairJobs() {
       </Stack>
     </Box>
 
-    <Dialog fullWidth maxWidth="md" onClose={() => !saving && setOpen(false)} open={open}>
+    <Dialog fullWidth maxWidth="md" onClose={closeCreateDialog} open={open}>
       <DialogTitle>Create Repair Job</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
@@ -243,15 +299,16 @@ export default function RepairJobs() {
             <TextField inputProps={{ inputMode: "decimal" }} label="Estimated cost" onChange={(event) => setForm((current) => ({ ...current, estimatedCost: event.target.value }))} value={form.estimatedCost} />
           </Box>
           <TextField inputProps={{ maxLength: 3000 }} label="Problem description *" minRows={4} multiline onChange={(event) => setForm((current) => ({ ...current, problemDescription: event.target.value }))} required value={form.problemDescription} />
+          <RepairPhotoUploader description="Optional intake evidence. These photos remain visible only to authorized staff." disabled={saving} label="Device intake photos" onChange={setIntakePhotos} onUploadStateChange={setIsIntakeUploading} photos={intakePhotos} />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button color="inherit" disabled={saving} onClick={() => setOpen(false)}>Cancel</Button>
-        <Button disabled={saving || !canCreateRepair} onClick={() => void submit()} startIcon={<LocalPrintshopRoundedIcon />} variant="contained">Create & print receipt</Button>
+        <Button color="inherit" disabled={saving || isIntakeUploading} onClick={closeCreateDialog}>Cancel</Button>
+        <Button disabled={saving || isIntakeUploading || !canCreateRepair} onClick={() => void submit()} startIcon={<LocalPrintshopRoundedIcon />} variant="contained">Create & print receipt</Button>
       </DialogActions>
     </Dialog>
 
-    <Dialog fullWidth maxWidth="md" onClose={() => setDetail(null)} open={Boolean(detail)}>
+    <Dialog fullWidth maxWidth="md" onClose={closeDetailDialog} open={Boolean(detail)}>
       <DialogTitle>{detail?.jobNo}</DialogTitle>
       <DialogContent dividers>
         {detail ? <Stack spacing={2}>
@@ -267,12 +324,14 @@ export default function RepairJobs() {
             <Typography whiteSpace="pre-wrap">{detail.problemDescription}</Typography>
           </Card>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <TextField label="Next status" onChange={(event) => setNewStatus(event.target.value as RepairStatus)} select value={newStatus}>
+            <TextField disabled={saving || isInspectionUploading} label="Next status" onChange={(event) => changeStatus(event.target.value as RepairStatus)} select value={newStatus}>
               {nextStatuses.map((option) => <MenuItem key={option} value={option}>{statusLabel(option)}</MenuItem>)}
             </TextField>
             <Button disabled={saving} onClick={() => printRepairJobReceipt(detail)} startIcon={<LocalPrintshopRoundedIcon />} variant="outlined">Reprint receipt</Button>
           </Box>
           <TextField label="Status note" minRows={2} multiline onChange={(event) => setStatusNote(event.target.value)} value={statusNote} />
+          {newStatus === "inspection" && newStatus !== detail.status ? <RepairPhotoUploader description="Required before customers can see the inspection stage. These images are shown only through this repair's secure receipt link." disabled={saving} label="Inspection photos" onChange={setInspectionPhotos} onUploadStateChange={setIsInspectionUploading} photos={inspectionPhotos} required /> : null}
+          {detail.documents.length ? <RepairPhotoGallery documents={detail.documents} /> : null}
           <Card sx={{ p: 2 }}>
             <Typography fontWeight={900} mb={1}>History</Typography>
             <Stack spacing={1}>
@@ -286,9 +345,27 @@ export default function RepairJobs() {
         </Stack> : null}
       </DialogContent>
       <DialogActions>
-        <Button color="inherit" onClick={() => setDetail(null)}>Close</Button>
-        <Button disabled={saving || !detail || newStatus === detail.status} onClick={() => void saveStatus()} variant="contained">Update Status</Button>
+        <Button color="inherit" disabled={saving || isInspectionUploading} onClick={closeDetailDialog}>Close</Button>
+        <Button disabled={saving || isInspectionUploading || !detail || newStatus === detail.status} onClick={() => void saveStatus()} variant="contained">Update Status</Button>
       </DialogActions>
     </Dialog>
   </>;
+}
+
+function RepairPhotoGallery({ documents }: { documents: RepairJobDetail["documents"] }) {
+  const photoDocuments = documents.filter((document) => document.documentType === "intakePhoto" || document.documentType === "inspectionPhoto");
+  if (!photoDocuments.length) return null;
+
+  return <Card sx={{ p: 2 }}>
+    <Typography fontWeight={900} mb={1}>Repair photos</Typography>
+    <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}>
+      {photoDocuments.map((document) => <Box key={document.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+        <Box alt={document.fileName} component="img" src={document.fileUrl} sx={{ display: "block", height: 112, objectFit: "cover", width: "100%" }} />
+        <Box p={1}>
+          <Chip color={document.documentType === "inspectionPhoto" ? "primary" : "default"} label={document.documentType === "inspectionPhoto" ? "Inspection" : "Intake"} size="small" />
+          <Typography display="block" mt={0.5} noWrap variant="caption">{document.fileName}</Typography>
+        </Box>
+      </Box>)}
+    </Box>
+  </Card>;
 }

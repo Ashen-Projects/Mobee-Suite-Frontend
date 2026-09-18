@@ -146,17 +146,23 @@ export default function CustomerList() {
       field: "name",
       flex: 1,
       headerName: "Customer",
-      minWidth: 200,
-      renderCell: ({ row }) => <Typography fontWeight={800} noWrap variant="body2">{row.name}</Typography>,
+      minWidth: isMobile ? 172 : 240,
+      renderCell: ({ row }) => <Stack alignItems="center" direction="row" gap={1} sx={{ height: "100%", minWidth: 0, width: "100%" }}>
+        <Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: 12, fontWeight: 900, height: 30, width: 30 }}>{initials(row.name)}</Avatar>
+        <Box minWidth={0}>
+          <Typography fontWeight={800} noWrap variant="body2">{row.name}</Typography>
+          <Typography color="text.secondary" noWrap variant="caption">{row.phone || "No phone"}</Typography>
+        </Box>
+      </Stack>,
     },
     {
       field: "contact",
       flex: 1,
       headerName: "Contact",
-      minWidth: 220,
+      minWidth: 210,
       renderCell: ({ row }) => <Stack justifyContent="center" sx={{ height: "100%", minWidth: 0, width: "100%" }}>
-        <Typography lineHeight={1.25} noWrap variant="body2">{row.phone || "No phone"}</Typography>
-        <Typography color="text.secondary" lineHeight={1.35} noWrap variant="caption">{row.email || "No email"}</Typography>
+        <Typography lineHeight={1.25} noWrap variant="body2">{row.email || "No email"}</Typography>
+        <Typography color="text.secondary" lineHeight={1.35} noWrap variant="caption">{row.nic ? `NIC: ${row.nic}` : "No NIC"}</Typography>
       </Stack>,
     },
     {
@@ -198,7 +204,7 @@ export default function CustomerList() {
         {canUpdate ? <Tooltip title={row.isActive ? "Deactivate customer" : "Activate customer"}><Switch checked={row.isActive} onClick={(event) => event.stopPropagation()} onChange={() => void toggleStatus(row)} size="small" /></Tooltip> : null}
       </Stack>,
     },
-  ], [canUpdate]);
+  ], [canUpdate, isMobile]);
 
   return <>
     <PageMeta description="Manage customer profiles and contact details." title="Customer List | Mobee Suite" />
@@ -227,7 +233,7 @@ export default function CustomerList() {
         <Box sx={{ borderTop: 1, borderColor: "divider", overflowX: "auto", width: "100%" }}>
           <DataGrid
             autoHeight
-            columnVisibilityModel={isMobile ? { address: false, contact: false } : undefined}
+            columnVisibilityModel={isMobile ? { actions: false, activity: false, address: false, contact: false } : undefined}
             columns={columns}
             disableRowSelectionOnClick
             loading={loading}
@@ -238,11 +244,11 @@ export default function CustomerList() {
             paginationModel={{ page: pagination.page, pageSize: pagination.pageSize }}
             rowCount={total}
             rows={rows}
-            rowHeight={56}
+            rowHeight={isMobile ? 62 : 58}
             sx={{
               border: 0,
               cursor: "pointer",
-              minWidth: isMobile ? 680 : 980,
+              minWidth: 0,
               "& .MuiDataGrid-cell": { alignItems: "center", display: "flex", lineHeight: "normal" },
               "& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within": { outline: "none" },
             }}

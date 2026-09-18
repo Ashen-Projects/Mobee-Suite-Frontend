@@ -1,10 +1,12 @@
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { Box, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, Typography, Button } from "@mui/material";
+import LocalOfferRoundedIcon from "@mui/icons-material/LocalOfferRounded";
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Stack, Typography } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { getStockUnits, type StockProductSummary, type StockUnit } from "../../redux/slices/inventoryRedux/stockRedux";
 import { fCurrency } from "../../utils/formatNumber";
+import { printPriceTags } from "../../utils/printBarcodes";
 
 type Props = { stockProduct: StockProductSummary | null; onClose: () => void };
 const pageSizes = [10, 15, 25, 50];
@@ -33,6 +35,24 @@ export default function StockProductUnitsDialog({ stockProduct, onClose }: Props
   useEffect(() => { setPage(0); }, [stockProduct?.productId, stockProduct?.locationId, stockProduct?.statusId]);
   useEffect(() => { if (stockProduct) void loadUnits(); }, [loadUnits, stockProduct]);
 
+  const priceTagItems = useMemo(() => {
+    const quantity = Math.max(0, Number(stockProduct?.quantity ?? 0));
+    if (!stockProduct || !quantity) return [];
+    return Array.from({ length: quantity }, () => ({
+      mrpPrice: stockProduct.productMrpPrice,
+      // Stock summaries represent the actual selected child product, including a variation.
+      productName: stockProduct.productName,
+    }));
+  }, [stockProduct]);
+
+  const printTags = () => {
+    try {
+      printPriceTags(priceTagItems);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to print price tags.");
+    }
+  };
+
   const renderIdentifier = (row: StockUnit) => {
     const identifiers = [
       row.barcode ? { label: row.barcode, type: "Barcode" } : null,
@@ -57,6 +77,10 @@ export default function StockProductUnitsDialog({ stockProduct, onClose }: Props
     <DialogTitle component="div" sx={{ pr: 7 }}><Typography variant="h5">{stockProduct?.productName ?? "Stock units"}</Typography><Typography color="text.secondary" variant="body2">{stockProduct?.locationName ?? "Unassigned location"} • {stockProduct?.statusLabel ?? "Unassigned status"} • {stockProduct?.quantity ?? 0} unit{stockProduct?.quantity === 1 ? "" : "s"}</Typography><IconButton aria-label="Close" onClick={onClose} sx={{ position: "absolute", right: 12, top: 12 }}><CloseRoundedIcon /></IconButton></DialogTitle>
     <Divider />
     <DialogContent sx={{ p: 0 }}><Box sx={{ height: "100%", minHeight: 420 }}><DataGrid<StockUnit> columns={columns} disableColumnMenu disableRowSelectionOnClick getRowHeight={() => 52} getRowId={(row) => row.id} onPaginationModelChange={(model) => { setPage(model.page); setPageSize(model.pageSize); }} pageSizeOptions={pageSizes} paginationMode="server" paginationModel={{ page, pageSize }} rowCount={total} rows={rows} sx={{ border: 0 }} /></Box></DialogContent>
-    <DialogActions sx={{ borderTop: 1, borderColor: "divider", p: 2 }}><Button color="inherit" onClick={onClose}>Close</Button></DialogActions>
+    <DialogActions sx={{ borderTop: 1, borderColor: "divider", flexWrap: "wrap", gap: 1, p: 2 }}>
+      <Typography color="text.secondary" flexGrow={1} fontSize={12} mr={{ sm: "auto" }}>{priceTagItems.length} price tag{priceTagItems.length === 1 ? "" : "s"} for this stock row</Typography>
+      <Button disabled={!priceTagItems.length} onClick={printTags} startIcon={<LocalOfferRoundedIcon />} variant="contained">Print Price Tags</Button>
+      <Button color="inherit" onClick={onClose}>Close</Button>
+    </DialogActions>
   </Dialog>;
 }

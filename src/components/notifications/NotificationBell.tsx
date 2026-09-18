@@ -68,7 +68,7 @@ export default function NotificationBell() {
 
   return <>
     <Tooltip title="Notifications">
-      <IconButton aria-label="Notifications" onClick={open} size="small" sx={{ display: { xs: "none", sm: "inline-flex" }, height: 36, width: 36 }}>
+      <IconButton aria-label="Notifications" onClick={open} size="small" sx={{ display: "inline-flex", height: { xs: 30, sm: 36 }, width: { xs: 30, sm: 36 } }}>
         <Badge badgeContent={unreadCount} color="error" max={99}>
           <NotificationsNoneOutlinedIcon fontSize="small" />
         </Badge>
@@ -76,9 +76,11 @@ export default function NotificationBell() {
     </Tooltip>
     <Menu
       anchorEl={anchor}
+      anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       onClose={close}
       open={Boolean(anchor)}
-      slotProps={{ paper: { sx: { border: 1, borderColor: "divider", borderRadius: 3, maxWidth: 390, mt: 1, overflow: "hidden", width: 390 } } }}
+      slotProps={{ paper: { sx: { border: 1, borderColor: "divider", borderRadius: 3, maxWidth: 390, mt: 1, overflow: "hidden", width: "min(390px, calc(100vw - 20px))" } } }}
+      transformOrigin={{ horizontal: "right", vertical: "top" }}
     >
       <Stack alignItems="center" direction="row" justifyContent="space-between" sx={{ px: 2, py: 1.5 }}>
         <Box>

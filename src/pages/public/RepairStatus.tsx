@@ -83,6 +83,19 @@ export default function RepairStatus() {
                 <Typography color="text.secondary" variant="body2">{dateTime(item.timestamp) || (item.completed ? "Completed" : "Pending")}</Typography>
               </Card>)}
             </Stack>
+            {result.inspectionPhotos.length ? <>
+              <Divider />
+              <Box>
+                <Typography fontWeight={900}>Inspection photos</Typography>
+                <Typography color="text.secondary" mb={1.25} variant="body2">Photos added by our technician during inspection.</Typography>
+                <Box sx={{ display: "grid", gap: 1.25, gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
+                  {result.inspectionPhotos.map((photo, index) => <Box key={`${photo.fileUrl}-${photo.timestamp}`} sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden" }}>
+                    <Box alt={`Inspection photo ${index + 1}`} component="img" src={photo.fileUrl} sx={{ display: "block", height: 132, objectFit: "cover", width: "100%" }} />
+                    <Typography color="text.secondary" display="block" p={1} variant="caption">Added {dateTime(photo.timestamp)}</Typography>
+                  </Box>)}
+                </Box>
+              </Box>
+            </> : null}
           </> : null}
         </Stack>
       </Card>
