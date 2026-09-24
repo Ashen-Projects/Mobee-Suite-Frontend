@@ -1,12 +1,14 @@
 import AttachFileRoundedIcon from "@mui/icons-material/AttachFileRounded";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
-import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import { Box, Button, Chip, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { deleteMediaFile, uploadMediaFile, type MediaFileAsset, type MediaFileFolderName } from "../../utils/mediaFileUpload";
+import { deleteMediaFile, downloadMediaFile, uploadMediaFile, type MediaFileAsset, type MediaFileFolderName } from "../../utils/mediaFileUpload";
+import FilePreviewDialog, { type PreviewableFile } from "./FilePreviewDialog";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ACCEPTED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
@@ -39,6 +41,7 @@ export default function CloudinaryFileUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<PreviewableFile | null>(null);
 
   useEffect(() => { onUploadStateChange?.(isUploading); }, [isUploading, onUploadStateChange]);
 
@@ -112,8 +115,9 @@ export default function CloudinaryFileUploader({
         <input accept="application/pdf,image/jpeg,image/png,image/webp" hidden onChange={(event) => { selectFiles(event.target.files ?? []); event.target.value = ""; }} ref={inputRef} type="file" />
       </Stack>
     </Box>
-    {pendingFiles.length ? <Stack spacing={0.75}><Typography fontWeight={800} variant="body2">Ready to upload</Typography>{pendingFiles.map((item) => <FileRow actions={<Tooltip key="remove" title="Remove selected file"><span><IconButton aria-label={`Remove ${item.file.name}`} disabled={disabled || isUploading} onClick={() => removePendingFile(item.id)} size="small"><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip>} fileName={item.file.name} key={item.id} />)}<Button disabled={disabled || isUploading} onClick={() => void uploadPendingFiles()} size="small" startIcon={isUploading ? <CircularProgress color="inherit" size={15} /> : <CloudUploadRoundedIcon />} sx={{ alignSelf: "flex-start" }} variant="contained">{isUploading ? "Uploading…" : "Upload invoice"}</Button></Stack> : null}
-    {value.length ? <Stack spacing={0.75}><Typography fontWeight={800} variant="body2">Attached invoice</Typography>{value.map((item) => <FileRow actions={<><Tooltip title="Open invoice"><IconButton aria-label={`Open ${item.fileName}`} component="a" href={item.url} rel="noreferrer" size="small" target="_blank"><OpenInNewRoundedIcon fontSize="small" /></IconButton></Tooltip><Tooltip title="Remove invoice"><span><IconButton aria-label={`Remove ${item.fileName}`} disabled={disabled || isUploading} onClick={() => void removeUploadedFile(item)} size="small"><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip></>} fileName={item.fileName} key={item.publicId} />)}</Stack> : null}
+    {pendingFiles.length ? <Stack spacing={0.75}><Typography fontWeight={800} variant="body2">Ready to upload</Typography>{pendingFiles.map((item) => <FileRow actions={<><Tooltip title="Preview selected file"><IconButton aria-label={`Preview ${item.file.name}`} onClick={() => setPreviewFile({ file: item.file, fileName: item.file.name })} size="small"><VisibilityOutlinedIcon fontSize="small" /></IconButton></Tooltip><Tooltip title="Remove selected file"><span><IconButton aria-label={`Remove ${item.file.name}`} disabled={disabled || isUploading} onClick={() => removePendingFile(item.id)} size="small"><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip></>} fileName={item.file.name} key={item.id} />)}<Button disabled={disabled || isUploading} onClick={() => void uploadPendingFiles()} size="small" startIcon={isUploading ? <CircularProgress color="inherit" size={15} /> : <CloudUploadRoundedIcon />} sx={{ alignSelf: "flex-start" }} variant="contained">{isUploading ? "Uploading…" : "Upload invoice"}</Button></Stack> : null}
+    {value.length ? <Stack spacing={0.75}><Typography fontWeight={800} variant="body2">Attached invoice</Typography>{value.map((item) => <FileRow actions={<><Tooltip title="Preview invoice"><IconButton aria-label={`Preview ${item.fileName}`} onClick={() => setPreviewFile({ fileName: item.fileName, fileUrl: item.url, publicId: item.publicId })} size="small"><VisibilityOutlinedIcon fontSize="small" /></IconButton></Tooltip><Tooltip title="Download invoice"><IconButton aria-label={`Download ${item.fileName}`} onClick={() => void downloadMediaFile(folderName, item.publicId, item.fileName, item.url).catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Unable to download the invoice file."))} size="small"><DownloadRoundedIcon fontSize="small" /></IconButton></Tooltip><Tooltip title="Remove invoice"><span><IconButton aria-label={`Remove ${item.fileName}`} disabled={disabled || isUploading} onClick={() => void removeUploadedFile(item)} size="small"><DeleteOutlineRoundedIcon fontSize="small" /></IconButton></span></Tooltip></>} fileName={item.fileName} key={item.publicId} />)}</Stack> : null}
+    <FilePreviewDialog file={previewFile} folderName={folderName} onClose={() => setPreviewFile(null)} />
   </Stack>;
 }
 

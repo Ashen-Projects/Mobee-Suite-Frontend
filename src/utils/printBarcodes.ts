@@ -127,7 +127,7 @@ export const printBarcodes = (items: BarcodePrintItem[]) => {
 
 const formatMrp = (value: number | string | null) => {
   const amount = Number(value ?? 0);
-  return `MRP LKR ${Number.isFinite(amount) ? amount.toLocaleString("en-LK", { maximumFractionDigits: 2, minimumFractionDigits: 2 }) : "0.00"}`;
+  return `RS:  ${Number.isFinite(amount) ? amount.toLocaleString("en-LK", { maximumFractionDigits: 2, minimumFractionDigits: 2 }) : "0.00"}`;
 };
 
 /**

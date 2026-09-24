@@ -5,6 +5,31 @@ import { dispatch } from "../../store";
 export type GrnStatus = "pendingCountApproval" | "pendingFinanceApproval" | "approved" | "declined";
 export type GrnUnit = { barcode?: string; generateBarcode?: boolean; identifiers?: Array<{ isPrimary?: boolean; type: "imei" | "serial"; value: string }> };
 export type GrnDocumentType = "other" | "supplierDeliveryNote" | "supplierInvoice";
+export type StockReceivingNote = {
+  createdBy: number;
+  createdByName: string | null;
+  grnId: number;
+  id: number;
+  items: Array<{
+    grnItemId: number;
+    id: number;
+    mrpPrice: string;
+    productId: number;
+    productName: string;
+    productSku: string | null;
+    quantity: number;
+    stockReceiptId: number;
+    unitCost: string;
+    units: Array<{ barcode: string | null; id: number; stockId: number; stockReceiptItemId: number }>;
+  }>;
+  locationId: number;
+  locationName: string;
+  noteNumber: string;
+  supplierCode: string;
+  supplierId: number;
+  supplierName: string;
+  timestamp: number;
+};
 export type GrnDocumentInput = { cloudinaryPublicId?: string; documentType: GrnDocumentType; fileName: string; fileUrl: string };
 export type GrnInput = { purchaseOrderId: number; supplierDeliveryNote?: string; note?: string; documents?: GrnDocumentInput[]; items: Array<{ purchaseOrderItemId: number; quantity: number; unitCost: number }> };
 export type GrnStockInput = {
@@ -12,7 +37,7 @@ export type GrnStockInput = {
   priceUpdates?: Array<{ lowestSellingPrice: number; mrpPrice: number; productId: number }>;
 };
 export type Grn = { id: number; grnNumber: string; purchaseOrderId: number; poNumber: string; supplierId: number; supplierCode: string; supplierName: string; locationId: number; locationName: string; supplierDeliveryNote: string | null; status: GrnStatus; paymentStatus: string; costTotal: string; timestamp: number; addedBy: number; addedByName: string; itemCount: number; totalQuantity: number };
-export type GrnDetail = Omit<Grn, "itemCount" | "totalQuantity"> & { note: string | null; paidAmount: string; countedBy: number | null; countedByName: string | null; counted2By: number | null; counted2ByName: string | null; financeApprovedBy: number | null; financeApprovedByName: string | null; counts: Array<{ id: number; countNumber: "first" | "second"; countedBy: number; isMatched: boolean; timestamp: number }>; documents: Array<{ cloudinaryPublicId: string | null; id: number; documentType: GrnDocumentType; fileName: string; fileUrl: string; timestamp: number; uploadedBy: number }>; history: Array<{ id: number; action: string; note: string | null; newStatus: string | null; previousStatus: string | null; timestamp: number; userId: number }>; items: Array<{ id: number; purchaseOrderItemId: number; productId: number; productName: string; productSku: string | null; lowestSellingPrice: string; mrpPrice: string; quantity: number; stockedQuantity: number; unitCost: string; totalAmount: string; units: Array<{ id: number; barcode: string | null; costPrice: string; status: string; statusLabel: string; identifiers: Array<{ id: number; type: "imei" | "serial"; value: string; isPrimary: boolean }> }> }> };
+export type GrnDetail = Omit<Grn, "itemCount" | "totalQuantity"> & { note: string | null; paidAmount: string; countedBy: number | null; countedByName: string | null; counted2By: number | null; counted2ByName: string | null; financeApprovedBy: number | null; financeApprovedByName: string | null; counts: Array<{ id: number; countNumber: "first" | "second"; countedBy: number; isMatched: boolean; timestamp: number }>; documents: Array<{ cloudinaryPublicId: string | null; id: number; documentType: GrnDocumentType; fileName: string; fileUrl: string; timestamp: number; uploadedBy: number }>; history: Array<{ id: number; action: string; note: string | null; newStatus: string | null; previousStatus: string | null; timestamp: number; userId: number }>; items: Array<{ id: number; purchaseOrderItemId: number; productId: number; productName: string; productSku: string | null; lowestSellingPrice: string; mrpPrice: string; quantity: number; stockedQuantity: number; unitCost: string; totalAmount: string; units: Array<{ id: number; barcode: string | null; costPrice: string; status: string; statusLabel: string; identifiers: Array<{ id: number; type: "imei" | "serial"; value: string; isPrimary: boolean }> }> }>; stockReceivingNotes: StockReceivingNote[] };
 export type GrnList = { items: Grn[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } };
 type State = { current: GrnDetail | null; error: string | null; items: Grn[]; pagination: GrnList["pagination"] };
 const initialState: State = { current: null, error: null, items: [], pagination: { page: 1, pageSize: 10, total: 0, totalPages: 0 } };

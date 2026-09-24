@@ -5,6 +5,7 @@ import { Box, Button, Chip, CircularProgress, IconButton, Stack, Tooltip, Typogr
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { deleteMediaImage, uploadMediaImage, type MediaImageAsset, type MediaImageFolderName } from "../../utils/mediaImageUpload";
+import ImagePreviewDialog, { type PreviewableImage } from "./ImagePreviewDialog";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -48,6 +49,7 @@ export default function CloudinaryImageUploader({
   const pendingRef = useRef<PendingImage[]>([]);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<PreviewableImage | null>(null);
 
   useEffect(() => { pendingRef.current = pendingImages; }, [pendingImages]);
   useEffect(() => () => revokePreviews(pendingRef.current), []);
@@ -147,7 +149,8 @@ export default function CloudinaryImageUploader({
       <ImageGrid>{pendingImages.map((image) => <PendingImageCard disabled={disabled || isUploading} image={image} key={image.id} onRemove={() => removePendingImage(image.id)} />)}</ImageGrid>
       <Button disabled={disabled || isUploading} onClick={() => void uploadPendingImages()} size="small" startIcon={isUploading ? <CircularProgress color="inherit" size={15} /> : <CloudUploadRoundedIcon />} sx={{ mt: 1 }} variant="contained">{isUploading ? "Uploading…" : `Upload ${pendingImages.length} image${pendingImages.length === 1 ? "" : "s"}`}</Button>
     </Box> : null}
-    {value.length ? <Box><Typography fontWeight={800} mb={0.75} variant="body2">Attached images</Typography><ImageGrid>{value.map((image, index) => <UploadedImageCard details={renderUploadedImageDetails?.(image, index, { disabled: disabled || isUploading, onRemove: () => void removeUploadedImage(image) })} disabled={disabled || isUploading} image={image} key={image.publicId} onRemove={() => void removeUploadedImage(image)} />)}</ImageGrid></Box> : null}
+    {value.length ? <Box><Typography fontWeight={800} mb={0.75} variant="body2">Attached images</Typography><Typography color="text.secondary" display="block" mb={0.75} variant="caption">Click a photo to view it full size.</Typography><ImageGrid>{value.map((image, index) => <UploadedImageCard details={renderUploadedImageDetails?.(image, index, { disabled: disabled || isUploading, onRemove: () => void removeUploadedImage(image) })} disabled={disabled || isUploading} image={image} key={image.publicId} onPreview={() => setPreviewImage({ fileName: image.fileName, url: image.url })} onRemove={() => void removeUploadedImage(image)} />)}</ImageGrid></Box> : null}
+    <ImagePreviewDialog image={previewImage} onClose={() => setPreviewImage(null)} />
   </Stack>;
 }
 
@@ -159,8 +162,8 @@ function PendingImageCard({ disabled, image, onRemove }: { disabled: boolean; im
   return <Box sx={{ border: 1, borderColor: "primary.main", borderRadius: 1.5, overflow: "hidden", position: "relative" }}><Box alt={image.file.name} component="img" src={image.previewUrl} sx={{ display: "block", height: 104, objectFit: "cover", width: "100%" }} /><RemoveImageButton disabled={disabled} label={image.file.name} onRemove={onRemove} /><Typography noWrap p={0.75} variant="caption">{image.file.name}</Typography></Box>;
 }
 
-function UploadedImageCard({ details, disabled, image, onRemove }: { details?: React.ReactNode; disabled: boolean; image: MediaImageAsset; onRemove: () => void }) {
-  return <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", position: "relative" }}><Box alt={image.fileName} component="img" src={image.url} sx={{ display: "block", height: 104, objectFit: "cover", width: "100%" }} />{details ?? <><RemoveImageButton disabled={disabled} label={image.fileName} onRemove={onRemove} /><Typography noWrap p={0.75} variant="caption">{image.fileName}</Typography></>}</Box>;
+function UploadedImageCard({ details, disabled, image, onPreview, onRemove }: { details?: React.ReactNode; disabled: boolean; image: MediaImageAsset; onPreview: () => void; onRemove: () => void }) {
+  return <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", position: "relative" }}><Box aria-label={`Preview ${image.fileName}`} component="button" onClick={onPreview} sx={{ appearance: "none", bgcolor: "transparent", border: 0, cursor: "zoom-in", display: "block", p: 0, width: "100%", "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: -2 }, "&:hover img": { transform: "scale(1.03)" } }} title={`Preview ${image.fileName}`} type="button"><Box alt={image.fileName} component="img" src={image.url} sx={{ display: "block", height: 104, objectFit: "cover", transition: "transform 160ms ease", width: "100%" }} /></Box>{details ?? <><RemoveImageButton disabled={disabled} label={image.fileName} onRemove={onRemove} /><Typography noWrap p={0.75} variant="caption">{image.fileName}</Typography></>}</Box>;
 }
 
 function RemoveImageButton({ disabled, label, onRemove }: { disabled: boolean; label: string; onRemove: () => void }) {

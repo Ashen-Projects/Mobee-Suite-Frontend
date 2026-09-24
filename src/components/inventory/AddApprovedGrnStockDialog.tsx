@@ -1,10 +1,12 @@
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import { Box, Button, Card, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, Stack, Switch, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { addGrnStock, getGrn, type GrnDetail, type GrnUnit } from "../../redux/slices/purchaseRedux/grnRedux";
+import { addGrnStock, getGrn, type GrnDetail, type GrnUnit, type StockReceivingNote } from "../../redux/slices/purchaseRedux/grnRedux";
+import { downloadStockReceivingNote } from "../../utils/downloadStockReceivingNote";
 import { fCurrency } from "../../utils/formatNumber";
 import { exportBarTenderCsv, printBarcodes, printPriceTags } from "../../utils/printBarcodes";
 
@@ -31,6 +33,8 @@ export default function AddApprovedGrnStockDialog({ grnId, onClose, onCompleted 
   const [items, setItems] = useState<Item[]>([]);
   const [saving, setSaving] = useState(false);
   const [printItems, setPrintItems] = useState<PrintableBarcode[]>([]);
+  const [stockReceivingNote, setStockReceivingNote] = useState<StockReceivingNote | null>(null);
+  const [downloadingNote, setDownloadingNote] = useState(false);
 
   useEffect(() => {
     if (!grnId) return;
@@ -68,9 +72,9 @@ export default function AddApprovedGrnStockDialog({ grnId, onClose, onCompleted 
         return (updatedItem?.units ?? []).slice(-selected.quantity).map((unit) => ({ barcode: unit.barcode ?? "", mrpPrice: selected.mrpPrice, productName: updatedItem?.productName ?? selected.productName, productSku: updatedItem?.productSku ?? selected.productSku }));
       });
       setPrintItems(printable);
+      setStockReceivingNote(updated.stockReceivingNotes[0] ?? null);
       toast.success("Stock units added successfully.");
       onCompleted();
-      if (!printable.length) onClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to add stock.");
     } finally {
@@ -78,10 +82,21 @@ export default function AddApprovedGrnStockDialog({ grnId, onClose, onCompleted 
     }
   };
 
-  const finishLabels = () => { setPrintItems([]); onClose(); };
+  const finishStockAddition = () => { setPrintItems([]); setStockReceivingNote(null); onClose(); };
   const printBarcodesNow = () => { try { printBarcodes(printItems); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to print barcodes."); } };
   const printPriceTagsNow = () => { try { printPriceTags(printItems); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to print price tags."); } };
   const exportCsv = () => { try { exportBarTenderCsv(printItems); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to export barcodes."); } };
+  const downloadReceivingNote = async () => {
+    if (!detail || !stockReceivingNote) return;
+    setDownloadingNote(true);
+    try {
+      await downloadStockReceivingNote(stockReceivingNote, detail.grnNumber, detail.poNumber);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to download the stock receiving note.");
+    } finally {
+      setDownloadingNote(false);
+    }
+  };
 
   return <>
     <Dialog fullScreen fullWidth onClose={onClose} open={Boolean(grnId)} PaperProps={{ sx: { borderRadius: { md: 3 }, height: { xs: "100%", md: "calc(100% - 48px)" }, m: { md: 3 }, maxWidth: { md: 1500 } } }}>
@@ -116,10 +131,10 @@ export default function AddApprovedGrnStockDialog({ grnId, onClose, onCompleted 
       </DialogContent>
       <DialogActions sx={{ borderTop: 1, borderColor: "divider", p: 2 }}><Button color="inherit" onClick={onClose}>Cancel</Button><Button disabled={saving || !items.some((item) => item.quantity > 0)} onClick={() => void submit()} startIcon={<Inventory2OutlinedIcon />} variant="contained">Add to Stock</Button></DialogActions>
     </Dialog>
-    <Dialog fullWidth maxWidth="sm" onClose={finishLabels} open={printItems.length > 0}>
-      <DialogTitle>Stock labels ready</DialogTitle>
-      <DialogContent><Stack spacing={1.5} pt={1}><Typography color="text.secondary" variant="body2">{printItems.length} stock unit{printItems.length === 1 ? "" : "s"} added. Barcode labels and price tags both use the same 30 mm × 20 mm label size. Price tags contain only the MoBee.lk logo, selected product or variation name, and MRP.</Typography><Typography fontWeight={700}>{printItems.filter((item) => item.barcode).length} barcode label{printItems.filter((item) => item.barcode).length === 1 ? "" : "s"} available</Typography></Stack></DialogContent>
-      <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}><Button color="inherit" onClick={finishLabels}>Done</Button><Button disabled={!printItems.some((item) => item.barcode)} onClick={exportCsv} startIcon={<DownloadRoundedIcon />} variant="outlined">Export BarTender CSV</Button><Button disabled={!printItems.some((item) => item.barcode)} onClick={printBarcodesNow} startIcon={<PrintRoundedIcon />} variant="outlined">Print Barcodes</Button><Button onClick={printPriceTagsNow} startIcon={<PrintRoundedIcon />} variant="contained">Print Price Tags</Button></DialogActions>
+    <Dialog fullWidth maxWidth="sm" onClose={finishStockAddition} open={Boolean(stockReceivingNote)}>
+      <DialogTitle>Stock added successfully</DialogTitle>
+      <DialogContent><Stack spacing={1.5} pt={1}><Typography color="text.secondary" variant="body2">{printItems.length} stock unit{printItems.length === 1 ? "" : "s"} added. One supplier receiving note was created for this stock-add batch, including each product, cost, MRP, quantity, and barcode number.</Typography><Typography fontWeight={700}>{stockReceivingNote?.noteNumber}</Typography><Typography color="text.secondary" variant="caption">Barcode labels and price tags both use the same 30 mm × 20 mm label size. Price tags contain only the MoBee.lk logo, selected product or variation name, and MRP.</Typography></Stack></DialogContent>
+      <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}><Button color="inherit" onClick={finishStockAddition}>Done</Button><Button disabled={downloadingNote} onClick={() => void downloadReceivingNote()} startIcon={<PictureAsPdfRoundedIcon />} variant="contained">{downloadingNote ? "Preparing PDF..." : "Download receiving note"}</Button><Button disabled={!printItems.some((item) => item.barcode)} onClick={exportCsv} startIcon={<DownloadRoundedIcon />} variant="outlined">Export BarTender CSV</Button><Button disabled={!printItems.some((item) => item.barcode)} onClick={printBarcodesNow} startIcon={<PrintRoundedIcon />} variant="outlined">Print Barcodes</Button><Button onClick={printPriceTagsNow} startIcon={<PrintRoundedIcon />} variant="outlined">Print Price Tags</Button></DialogActions>
     </Dialog>
   </>;
 }
