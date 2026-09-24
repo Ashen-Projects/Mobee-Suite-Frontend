@@ -8,6 +8,7 @@ import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import { Box, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, SwipeableDrawer, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "react-toastify";
+import ImagePreviewDialog, { type PreviewableImage } from "../common/ImagePreviewDialog";
 import ProductImageUploadDialog, { type ProductFormImage } from "./ProductImageUploadDialog";
 import { createProduct, deleteProductImageUpload, updateProduct, updateProductStatus, type ProductAttribute, type ProductCategory, type ProductDetail, type ProductImageInput, type ProductInput, type ProductListItem, type ProductStockLevel } from "../../redux/slices/productRedux/productRedux";
 import { exportBarTenderCsv, printBarcodes } from "../../utils/printBarcodes";
@@ -59,12 +60,14 @@ export default function ProductFormDialog({ attributes, categories, initialParen
   const [createdBarcode, setCreatedBarcode] = useState<PrintableBarcode | null>(null);
   const [minimumStockByLocation, setMinimumStockByLocation] = useState<Record<number, string>>({});
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<PreviewableImage | null>(null);
   const isClosingRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     isClosingRef.current = false;
     setImageDialogOpen(false);
+    setPreviewImage(null);
     setTab(product?.hasVariations ? 0 : 1);
     const nextKind: ProductKind = product?.parentId || (!product && initialParentId) ? "variation" : product?.hasVariations ? "variable" : "simple";
     setKind(nextKind);
@@ -298,7 +301,35 @@ export default function ProductFormDialog({ attributes, categories, initialParen
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}><TextField fullWidth label="Display priority" onChange={(event) => setPriority(Math.max(0, Number(event.target.value)))} slotProps={{ htmlInput: { min: 0 } }} type="text" value={priority} /><FormControlLabel control={<Switch checked={isAvailableOnWeb} onChange={(event) => setIsAvailableOnWeb(event.target.checked)} />} label="Available on website" /></Stack>
         </Stack>
       </Stack></Card>
-      <Card sx={{ ...panelSx, alignSelf: "start", position: { lg: "sticky" }, top: 0 }}><Stack spacing={2}><Box><Typography fontWeight={700} variant="h6">Image Gallery</Typography><Typography color="text.secondary" variant="body2">Select, preview, and upload product images securely to Cloudinary.</Typography></Box><Stack alignItems="center" direction="row" justifyContent="space-between"><Box><Typography fontWeight={800} variant="body2">{images.length ? `${images.length} product image${images.length === 1 ? "" : "s"}` : "No product images"}</Typography><Typography color="text.secondary" variant="caption">JPEG, PNG, or WebP · Up to 5 MB</Typography></Box><Button onClick={() => setImageDialogOpen(true)} startIcon={<AddPhotoAlternateOutlinedIcon />} variant="contained">Manage</Button></Stack>{images.length ? <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>{images.slice(0, 6).map((image, index) => image.url ? <Box alt={image.altText ?? `Product image ${index + 1}`} component="img" key={image.clientId} src={image.url} sx={{ border: 1, borderColor: image.isPrimary ? "primary.main" : "divider", borderRadius: 1.5, height: 82, objectFit: "cover", width: "100%" }} /> : <Box key={image.clientId} sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 1.5, display: "flex", height: 82, justifyContent: "center" }}><CircularProgress size={20} /></Box>)}</Box> : <Box sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", display: "flex", justifyContent: "center", minHeight: 160, p: 2, textAlign: "center" }}><Stack alignItems="center" spacing={1}><AddPhotoAlternateOutlinedIcon color="primary" /><Typography color="text.secondary" variant="body2">Choose images to preview before uploading.</Typography><Button onClick={() => setImageDialogOpen(true)} size="small" variant="outlined">Choose images</Button></Stack></Box>}</Stack></Card>
+      <Card sx={{ ...panelSx, alignSelf: "start", position: { lg: "sticky" }, top: 0 }}>
+        <Stack spacing={2}>
+          <Box>
+            <Typography fontWeight={700} variant="h6">Image Gallery</Typography>
+            <Typography color="text.secondary" variant="body2">Select, preview, and upload product images securely to Cloudinary.</Typography>
+          </Box>
+          <Stack alignItems="center" direction="row" justifyContent="space-between">
+            <Box>
+              <Typography fontWeight={800} variant="body2">{images.length ? `${images.length} product image${images.length === 1 ? "" : "s"}` : "No product images"}</Typography>
+              <Typography color="text.secondary" variant="caption">JPEG, PNG, or WebP · Up to 5 MB</Typography>
+            </Box>
+            <Button onClick={() => setImageDialogOpen(true)} startIcon={<AddPhotoAlternateOutlinedIcon />} variant="contained">Manage</Button>
+          </Stack>
+          {images.length ? <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+            {images.slice(0, 6).map((image, index) => image.url ? <Box
+              aria-label={`Preview ${image.altText?.trim() || `product image ${index + 1}`}`}
+              component="button"
+              key={image.clientId}
+              onClick={() => setPreviewImage({ altText: image.altText, fileName: image.altText?.trim() || `Product image ${index + 1}`, url: image.url! })}
+              sx={{ appearance: "none", bgcolor: "transparent", border: 0, cursor: "zoom-in", display: "block", p: 0, "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 }, "&:hover img": { transform: "scale(1.04)" } }}
+              title="Preview image"
+              type="button"
+            >
+              <Box alt={image.altText ?? `Product image ${index + 1}`} component="img" src={image.url} sx={{ border: 1, borderColor: image.isPrimary ? "primary.main" : "divider", borderRadius: 1.5, display: "block", height: 82, objectFit: "cover", transition: "transform 160ms ease", width: "100%" }} />
+            </Box> : <Box key={image.clientId} sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 1.5, display: "flex", height: 82, justifyContent: "center" }}><CircularProgress size={20} /></Box>)}
+          </Box> : <Box sx={{ alignItems: "center", border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", display: "flex", justifyContent: "center", minHeight: 160, p: 2, textAlign: "center" }}><Stack alignItems="center" spacing={1}><AddPhotoAlternateOutlinedIcon color="primary" /><Typography color="text.secondary" variant="body2">Choose images to preview before uploading.</Typography><Button onClick={() => setImageDialogOpen(true)} size="small" variant="outlined">Choose images</Button></Stack></Box>}
+          {images.length ? <Typography color="text.secondary" variant="caption">Click a product image to view it full size.</Typography> : null}
+        </Stack>
+      </Card>
       </Box> : null}
 
       {tab === 0 ? <Card sx={{ ...panelSx, p: { xs: 1.5, md: 2 } }}><Stack spacing={2}>
@@ -331,6 +362,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
     </Box>
   </SwipeableDrawer>
   <ProductImageUploadDialog images={images} onChange={setImages} onClose={() => setImageDialogOpen(false)} onDelete={removeImage} onSetPrimary={setPrimaryImage} onUpdate={updateImage} open={imageDialogOpen} />
+  <ImagePreviewDialog image={previewImage} onClose={() => setPreviewImage(null)} />
   <Dialog fullWidth maxWidth="sm" open={Boolean(createdBarcode)} onClose={closeAfterTestBarcode}>
     <DialogTitle>Print test barcode?</DialogTitle>
     <DialogContent>
