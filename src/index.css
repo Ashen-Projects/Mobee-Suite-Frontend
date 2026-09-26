@@ -794,3 +794,15 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+
+/* Compact, macOS-style arrival alerts. Standard operation toasts keep their
+   existing appearance and position; only real-time notifications use this. */
+.Toastify__toast.notification-arrival-toast {
+  background: transparent;
+  box-shadow: none;
+  margin-bottom: 0.75rem;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+  width: min(390px, calc(100vw - 24px));
+}

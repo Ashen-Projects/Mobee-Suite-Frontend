@@ -22,6 +22,7 @@ type State = {
   error: string | null;
   items: AppNotification[];
   pagination: NotificationListResponse["pagination"];
+  unreadItems: AppNotification[];
   unreadCount: number;
 };
 
@@ -29,6 +30,7 @@ const initialState: State = {
   error: null,
   items: [],
   pagination: { page: 1, pageSize: 10, total: 0, totalPages: 0 },
+  unreadItems: [],
   unreadCount: 0,
 };
 
@@ -41,15 +43,23 @@ const slice = createSlice({
     },
     readAll(state) {
       state.items = state.items.map((item) => ({ ...item, isRead: true }));
+      state.unreadItems = [];
       state.unreadCount = 0;
     },
     readOne(state, action: PayloadAction<number>) {
+      const wasUnread = state.items.some((item) => item.id === action.payload && !item.isRead)
+        || state.unreadItems.some((item) => item.id === action.payload);
       state.items = state.items.map((item) => item.id === action.payload ? { ...item, isRead: true } : item);
-      state.unreadCount = Math.max(0, state.items.filter((item) => !item.isRead).length);
+      state.unreadItems = state.unreadItems.filter((item) => item.id !== action.payload);
+      if (wasUnread) state.unreadCount = Math.max(0, state.unreadCount - 1);
     },
     received(state, action: PayloadAction<NotificationListResponse>) {
       state.items = action.payload.items;
       state.pagination = action.payload.pagination;
+      state.error = null;
+    },
+    unreadReceived(state, action: PayloadAction<NotificationListResponse>) {
+      state.unreadItems = action.payload.items;
       state.error = null;
     },
     unreadCountReceived(state, action: PayloadAction<number>) {

@@ -2,6 +2,7 @@ import DoneAllRoundedIcon from "@mui/icons-material/DoneAllRounded";
 import { Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import PageBreadcrumb from "../../../components/common/PageBreadCrumb";
 import {
   getNotifications,
@@ -30,17 +31,27 @@ export default function NotificationsPage() {
   const { items, pagination, unreadCount } = useAppSelector((state) => state.notifications);
 
   useEffect(() => {
-    void getNotifications({ page: page + 1, pageSize, status }).then((value) => dispatch(notificationActions.received(value)));
+    void getNotifications({ page: page + 1, pageSize, status })
+      .then((value) => dispatch(notificationActions.received(value)))
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load notifications."));
   }, [dispatch, page, pageSize, status]);
 
   const readOne = async (id: number) => {
-    await markNotificationRead(id);
-    dispatch(notificationActions.readOne(id));
+    try {
+      await markNotificationRead(id);
+      dispatch(notificationActions.readOne(id));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to mark this notification as read.");
+    }
   };
 
   const readAll = async () => {
-    await markAllNotificationsRead();
-    dispatch(notificationActions.readAll());
+    try {
+      await markAllNotificationsRead();
+      dispatch(notificationActions.readAll());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to mark notifications as read.");
+    }
   };
 
   const columns = useMemo<GridColDef<AppNotification>[]>(() => [

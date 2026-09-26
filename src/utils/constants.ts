@@ -78,6 +78,8 @@ export const USER_PERMISSIONS = {
   SUPPLIERS_UPDATE: "suppliers.update",
   SUPPLIERS_DELETE: "suppliers.delete",
   STOCK_VIEW: "stock.view",
+  STOCK_DAMAGE_CREATE: "stock.damage.create",
+  STOCK_DAMAGE_VIEW: "stock.damage.view",
   POS_VIEW: "pos.view",
 
 } as const;
