@@ -21,6 +21,7 @@ import PurchaseOrders from "../pages/Dashboard/purchasing/PurchaseOrders";
 import GoodsReceivedNotes from "../pages/Dashboard/purchasing/GoodsReceivedNotes";
 import StockOverview from "../pages/Dashboard/inventory/StockOverview";
 import StockList from "../pages/Dashboard/inventory/StockList";
+import DamagedStock from "../pages/Dashboard/inventory/DamagedStock";
 import PosLanding from "../pages/Dashboard/pos/PosLanding";
 import NewSale from "../pages/Dashboard/pos/NewSale";
 import SalesList from "../pages/Dashboard/pos/SalesList";
@@ -101,7 +102,7 @@ export default function Router() {
           children: [
             { path: "overview", element: withPermission(PATH_DASHBOARD.inventory.overview, <StockOverview />) },
             { path: "stocks", element: withPermission(PATH_DASHBOARD.inventory.stocks, <StockList />) },
-            { path: "adjustments", element: placeholder(PATH_DASHBOARD.inventory.adjustments, "Inventory", "Stock Adjustments", "Review and manage stock correction records.") },
+            { path: "adjustments", element: withPermission(PATH_DASHBOARD.inventory.adjustments, <DamagedStock />) },
             { path: "transfers", element: placeholder(PATH_DASHBOARD.inventory.transfers, "Inventory", "Stock Transfers", "Track stock movements between Mobee locations.") },
             { path: "logs", element: placeholder(PATH_DASHBOARD.inventory.logs, "Inventory", "Stock Logs", "Inspect the complete history of inventory movements.") },
           ],

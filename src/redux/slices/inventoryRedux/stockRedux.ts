@@ -1,4 +1,4 @@
-import { get } from "../../../inteceptor";
+import { get, post } from "../../../inteceptor";
 
 export type StockIdentifier = { id: number; isPrimary: boolean; type: "imei" | "serial"; value: string };
 export type StockUnit = { id: number; barcode: string | null; costPrice: string; grnId: number | null; grnNumber: string | null; locationId: number | null; locationName: string | null; productId: number | null; productName: string | null; productSku: string | null; statusId: number | null; statusName: string | null; statusLabel: string | null; timestamp: number; identifiers: StockIdentifier[] };
@@ -22,6 +22,62 @@ export type StockAvailabilityCheck = {
   message: string;
   query: string;
 };
+export type StockDamageReason = "physical_damage" | "water_damage" | "manufacturing_defect" | "packaging_damage" | "expired_or_obsolete" | "other";
+export type StockDamageScanItem = {
+  barcode: string | null;
+  costPrice: number;
+  identifierType: "barcode" | "imei" | "serial" | null;
+  identifierValue: string | null;
+  locationId: number | null;
+  locationName: string | null;
+  productId: number | null;
+  productMrpPrice: number;
+  productName: string | null;
+  productSku: string | null;
+  statusId: number | null;
+  statusLabel: string | null;
+  statusName: string | null;
+  stockId: number;
+};
+export type StockDamageScanResult = { eligible?: boolean; found: boolean; item?: StockDamageScanItem; message: string; query: string };
+export type StockDamageInput = { note?: string; reason: StockDamageReason; stockIds: number[] };
+export type StockDamageRecord = {
+  adjustmentId: number;
+  adjustmentNo: string;
+  barcode: string | null;
+  costLoss: number;
+  decisionNote: string | null;
+  locationName: string | null;
+  note: string | null;
+  potentialGrossMargin: number;
+  potentialSalesValue: number;
+  productName: string | null;
+  productSku: string | null;
+  reason: StockDamageReason;
+  reasonLabel: string;
+  recordedBy: string | null;
+  status: "approved" | "draft" | "declined";
+  statusLabel: string;
+  stockId: number;
+  timestamp: number;
+};
+export type StockDamageList = {
+  items: StockDamageRecord[];
+  pagination: StockList["pagination"];
+  summary: { costLoss: number; potentialGrossMargin: number; potentialSalesValue: number; units: number };
+};
+export type StockDamageCreated = {
+  adjustmentId: number;
+  adjustmentNo: string;
+  costLoss: number;
+  potentialGrossMargin: number;
+  potentialSalesValue: number;
+  reason: StockDamageReason;
+  reasonLabel: string;
+  status: "approved" | "draft";
+  timestamp: number;
+  units: Array<{ barcode: string | null; costPrice: number; productName: string | null; stockId: number }>;
+};
 
 export const getStockOverview = async () => (await get<StockOverview>("stock/overview")).data;
 export const getStock = async (query: Record<string, unknown>) => (await get<StockList>("stock", query)).data;
@@ -29,3 +85,8 @@ export const getStockUnits = async (productId: number, query: Record<string, unk
 export const getStockStatuses = async () => (await get<StockStatus[]>("stock/statuses")).data;
 export const getPendingStockReceipts = async (query: Record<string, unknown>) => (await get<PendingStockReceiptList>("stock/pending-receipts", query)).data;
 export const checkStockAvailability = async (code: string) => (await get<StockAvailabilityCheck>("stock/availability-check", { code })).data;
+export const getStockDamage = async (query: Record<string, unknown>) => (await get<StockDamageList>("stock/damage", query)).data;
+export const scanStockForDamage = async (code: string) => (await post<StockDamageScanResult, { code: string }>("stock/damage/scan", { code }, undefined, false, { trackLoading: false })).data;
+export const createStockDamage = async (input: StockDamageInput) => (await post<StockDamageCreated, StockDamageInput>("stock/damage", input, undefined, false)).data;
+export const approveStockDamage = async (id: number) => (await post<{ adjustmentId: number; adjustmentNo: string; costLoss: number; status: "approved"; units: number }, Record<string, never>>(`stock/damage/${id}/approve`, {}, undefined, false)).data;
+export const declineStockDamage = async (id: number, note?: string) => (await post<{ adjustmentId: number; adjustmentNo: string; status: "declined" }, { note?: string }>(`stock/damage/${id}/decline`, { note }, undefined, false)).data;

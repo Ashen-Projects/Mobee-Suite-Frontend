@@ -51,7 +51,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { name: "Stock Overview", path: PATH_DASHBOARD.inventory.overview },
       { name: "Stock List", path: PATH_DASHBOARD.inventory.stocks },
-      { name: "Stock Adjustments", path: PATH_DASHBOARD.inventory.adjustments },
+      { name: "Damaged Stock", path: PATH_DASHBOARD.inventory.adjustments },
       { name: "Stock Transfers", path: PATH_DASHBOARD.inventory.transfers },
       { name: "Stock Logs", path: PATH_DASHBOARD.inventory.logs },
     ],

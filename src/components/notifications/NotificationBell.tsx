@@ -2,9 +2,11 @@ import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNone
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import DoneAllRoundedIcon from "@mui/icons-material/DoneAllRounded";
 import { Badge, Box, Button, Chip, Divider, IconButton, ListItemText, Menu, MenuItem, Stack, Tooltip, Typography } from "@mui/material";
-import { MouseEvent, useEffect, useRef, useState } from "react";
+import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
+import { toast } from "react-toastify";
 import notificationSound from "../../assets/sounds/notification.wav";
+import IncomingNotificationToast from "./IncomingNotificationToast";
 import {
   getNotifications,
   getUnreadNotificationCount,
@@ -29,41 +31,75 @@ const severityColor = (severity: AppNotification["severity"]) => {
 
 export default function NotificationBell() {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const previousUnreadCount = useRef<number | null>(null);
+  const knownNotificationIds = useRef(new Set<number>());
+  const notificationSessionStartedAt = useRef(Date.now());
   const dispatch = useAppDispatch();
-  const { items, unreadCount } = useAppSelector((state) => state.notifications);
+  const { unreadCount, unreadItems } = useAppSelector((state) => state.notifications);
 
-  const refresh = async () => {
-    const [count, list] = await Promise.all([
-      getUnreadNotificationCount(),
-      getNotifications({ page: 1, pageSize: 6, status: "all" }),
-    ]);
-    dispatch(notificationActions.unreadCountReceived(count));
-    dispatch(notificationActions.received(list));
-  };
+  const showArrivalToast = useCallback((item: AppNotification) => {
+    toast(<IncomingNotificationToast notification={item} />, {
+      autoClose: 8_000,
+      className: "notification-arrival-toast",
+      closeButton: false,
+      closeOnClick: true,
+      draggable: false,
+      hideProgressBar: true,
+      pauseOnHover: true,
+      position: "top-right",
+      toastId: `notification-arrival-${item.id}`,
+    });
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [count, list] = await Promise.all([
+        getUnreadNotificationCount(),
+        getNotifications({ page: 1, pageSize: 50, status: "unread" }),
+      ]);
+      const incoming = list.items.filter((item) => (
+        item.timestamp >= notificationSessionStartedAt.current
+        && !knownNotificationIds.current.has(item.id)
+      )).reverse();
+      list.items.forEach((item) => knownNotificationIds.current.add(item.id));
+      while (knownNotificationIds.current.size > 500) {
+        const oldestId = knownNotificationIds.current.values().next().value;
+        if (oldestId === undefined) break;
+        knownNotificationIds.current.delete(oldestId);
+      }
+      dispatch(notificationActions.unreadCountReceived(count));
+      dispatch(notificationActions.unreadReceived(list));
+      if (incoming.length) {
+        playSound(notificationSound, 0.48);
+        incoming.forEach(showArrivalToast);
+      }
+    } catch {
+      // Polling must stay silent when a temporary network error occurs.
+    }
+  }, [dispatch, showArrivalToast]);
 
   useEffect(() => {
     void refresh();
     const id = window.setInterval(() => void refresh(), 30_000);
     return () => window.clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    if (previousUnreadCount.current !== null && unreadCount > previousUnreadCount.current) {
-      playSound(notificationSound, 0.48);
-    }
-    previousUnreadCount.current = unreadCount;
-  }, [unreadCount]);
+  }, [refresh]);
 
   const open = (event: MouseEvent<HTMLElement>) => setAnchor(event.currentTarget);
   const close = () => setAnchor(null);
   const readOne = async (id: number) => {
-    await markNotificationRead(id);
-    dispatch(notificationActions.readOne(id));
+    try {
+      await markNotificationRead(id);
+      dispatch(notificationActions.readOne(id));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to mark this notification as read.");
+    }
   };
   const readAll = async () => {
-    await markAllNotificationsRead();
-    dispatch(notificationActions.readAll());
+    try {
+      await markAllNotificationsRead();
+      dispatch(notificationActions.readAll());
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to mark notifications as read.");
+    }
   };
 
   return <>
@@ -90,19 +126,19 @@ export default function NotificationBell() {
         <Button disabled={!unreadCount} onClick={() => void readAll()} size="small" startIcon={<DoneAllRoundedIcon />}>Read all</Button>
       </Stack>
       <Divider />
-      {items.length ? items.map((item) => (
+      {unreadItems.length ? unreadItems.slice(0, 6).map((item) => (
         <MenuItem
           key={item.id}
           onClick={() => void readOne(item.id)}
           sx={{ alignItems: "flex-start", gap: 1.25, py: 1.25, whiteSpace: "normal" }}
         >
-          <Box sx={{ bgcolor: item.isRead ? "action.hover" : "primary.main", borderRadius: 999, height: 9, mt: 1, width: 9 }} />
+          <Box sx={{ bgcolor: "primary.main", borderRadius: 999, height: 9, mt: 1, width: 9 }} />
           <ListItemText
             primary={<Stack alignItems="center" direction="row" spacing={1}><Typography fontSize={13} fontWeight={800}>{item.title}</Typography><Chip color={severityColor(item.severity)} label={item.module} size="small" sx={{ height: 20, textTransform: "capitalize" }} /></Stack>}
             secondary={<><Typography color="text.secondary" component="span" display="block" fontSize={12}>{item.message}</Typography><Typography color="text.disabled" component="span" display="block" fontSize={11} mt={0.5}>{formatDateTime(item.timestamp)}</Typography></>}
           />
         </MenuItem>
-      )) : <Box sx={{ px: 2, py: 4, textAlign: "center" }}><Typography color="text.secondary">No notifications yet.</Typography></Box>}
+      )) : <Box sx={{ px: 2, py: 4, textAlign: "center" }}><Typography color="text.secondary">You are all caught up.</Typography></Box>}
       <Divider />
       <Button component={Link} endIcon={<OpenInNewRoundedIcon />} fullWidth onClick={close} sx={{ borderRadius: 0, py: 1.25 }} to={PATH_DASHBOARD.notifications}>View all notifications</Button>
     </Menu>

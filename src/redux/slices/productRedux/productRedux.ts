@@ -66,6 +66,8 @@ export type ProductImageInput = {
   url: string;
 };
 
+export type ProductWarrantyType = "manufacturer" | "seller" | "service" | "extended";
+
 export type ProductStockLevel = {
   locationId: number;
   locationName: string;
@@ -100,6 +102,8 @@ export type ProductInput = {
   shortDescription: string | null;
   sku: string | null;
   stockLevels: Array<Pick<ProductStockLevel, "locationId" | "minimumStockLevel">>;
+  warrantyPeriodMonths: number;
+  warrantyType: ProductWarrantyType | null;
 };
 
 export type ProductListItem = {
@@ -116,6 +120,8 @@ export type ProductListItem = {
   priority: number | null;
   sku: string | null;
   variationCount: number;
+  warrantyPeriodMonths: number;
+  warrantyType: ProductWarrantyType | null;
 };
 
 export type ProductDetail = ProductListItem & {
