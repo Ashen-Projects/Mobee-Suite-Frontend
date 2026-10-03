@@ -7,6 +7,7 @@ const LOGO_URL = "https://res.cloudinary.com/gxsancbf/image/upload/v1788373843/M
 const BUSINESS_NAME = "MoBee.lk (PVT) Ltd.";
 const BUSINESS_PHONE = "0728920900";
 const BUSINESS_ADDRESS = "35/B Ingiriya Rd, Padukka";
+const SOFTWARE_DEVELOPER = "Software Developed By<br/>Thushan Damjith<br/>+94762167969";
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -35,12 +36,12 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   const invoiceBarcode = barcodeSvg(sale.invoiceNo);
   const itemRows = sale.items.map((item) => `
     <div class="item">
-      <div class="item-name">${escapeHtml(item.productName)}</div>
-      <div class="item-line">
-        <span>${item.quantity} × ${fCurrency(Number(item.unitPrice))}</span>
-        <strong>${fCurrency(Number(item.totalAmount))}</strong>
+      <div class="item-details">
+        <div class="item-name">${escapeHtml(item.productName)}</div>
+        <div class="item-code">${escapeHtml(item.productSku ?? `Product #${item.productId}`)}</div>
       </div>
-      <div class="item-code">${escapeHtml(item.productSku ?? `Product #${item.productId}`)}</div>
+      <div class="item-quantity">${item.quantity}</div>
+      <strong class="item-price">${fCurrency(Number(item.totalAmount))}</strong>
     </div>
   `).join("");
   const win = window.open("", "_blank", "width=420,height=720");
@@ -83,20 +84,20 @@ export const printSaleReceipt = (sale: SaleDetail) => {
       .meta span,
       .meta strong { min-width: 0; overflow-wrap: anywhere; }
       .meta strong { font-size: 10.5px; }
-      .table-head { display: grid; grid-template-columns: minmax(0, 1fr) 25mm; font-size: 9.5px; font-weight: 800; letter-spacing: .35px; padding: 0 0 .45mm; text-transform: uppercase; }
-      .table-head span:last-child { text-align: right; }
-      .item { border-top: 1px dashed #bbb; padding: .75mm 0; }
+      .table-head { display: grid; grid-template-columns: minmax(0, 1fr) 11mm 25mm; font-size: 9.5px; font-weight: 800; letter-spacing: .35px; padding: 0 0 .45mm; text-transform: uppercase; }
+      .table-head span:not(:first-child) { text-align: right; }
+      .item { align-items: start; border-top: 1px dashed #bbb; display: grid; grid-template-columns: minmax(0, 1fr) 11mm 25mm; gap: 1mm; padding: .75mm 0; }
       .item:first-of-type { border-top: 0; }
       .item-name { font-size: 10.5px; font-weight: 800; overflow-wrap: anywhere; }
-      .item-line { display: flex; justify-content: space-between; gap: 2mm; margin-top: .35mm; }
-      .item-line span { color: #444; }
-      .item-line strong { white-space: nowrap; }
       .item-code { color: #666; font-size: 9px; margin-top: .25mm; }
+      .item-quantity, .item-price { padding-top: .15mm; text-align: right; white-space: nowrap; }
+      .item-quantity { color: #444; }
       .summary { margin-left: auto; width: 45mm; }
       .row { display: flex; justify-content: space-between; gap: 2mm; margin: .45mm 0; }
       .row span:last-child { text-align: right; white-space: nowrap; }
       .total { border-top: 1px solid #111; font-size: 14px; font-weight: 900; margin-top: .65mm; padding-top: .55mm; text-transform: uppercase; }
       .thanks { font-size: 12px; font-weight: 900; letter-spacing: .8px; margin: .9mm 0 .35mm; text-align: center; text-transform: uppercase; }
+      .developer { color: #666; font-size: 8px; line-height: 1.25; margin: .8mm 0 0; text-align: center; }
       .barcode { display: flex; justify-content: center; margin-top: .9mm; page-break-inside: avoid; break-inside: avoid; }
       .barcode svg { height: 12mm; max-width: 58mm; width: 58mm; }
       .printed { margin-top: .6mm; }
@@ -134,7 +135,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
         ${sale.customerPhone ? `<span>Phone</span><span>${escapeHtml(sale.customerPhone)}</span>` : ""}
       </div>
       <div class="line"></div>
-      <div class="table-head"><span>Item</span><span>Amount</span></div>
+      <div class="table-head"><span>Item</span><span>Qty</span><span>Price</span></div>
       ${itemRows}
       <div class="line"></div>
       <div class="summary">
@@ -150,6 +151,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
       <p class="center muted">We appreciate your purchase.<br/>Visit us again!</p>
       <div class="barcode">${invoiceBarcode}</div>
       <p class="center muted printed">Printed ${printedAt}</p>
+      <p class="developer">${SOFTWARE_DEVELOPER}</p>
     </div>
     <script>
       window.onload = () => { window.focus(); window.print(); };
