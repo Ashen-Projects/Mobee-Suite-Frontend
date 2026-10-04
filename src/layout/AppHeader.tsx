@@ -34,7 +34,7 @@ export default function AppHeader() {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const canOpenPos = canAny([...getRoutePermissions(PATH_DASHBOARD.pos.root)])
-    && (hasRole(USER_ROLES.ADMIN) || ["sales", "sale", "cashier", "sales_person"].some((role) => hasRole(role)));
+    && (hasRole(USER_ROLES.ADMIN) || ["sales", "sale", "cashier", "sales_person", "MOBEE.LK"].some((role) => hasRole(role)));
   const posActive = pathname === PATH_DASHBOARD.pos.root || pathname.startsWith(`${PATH_DASHBOARD.pos.root}/`);
   const visibleNavItems = navItems.map((item) => item.subItems ? { ...item, subItems: item.subItems.filter((child) => {
     const permissions = getRoutePermissions(child.path);
