@@ -4,6 +4,8 @@ import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import LocalPrintshopRoundedIcon from "@mui/icons-material/LocalPrintshopRounded";
 import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import PriceCheckRoundedIcon from "@mui/icons-material/PriceCheckRounded";
+import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
+import RemoveCircleOutlineRoundedIcon from "@mui/icons-material/RemoveCircleOutlineRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import { Autocomplete, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, InputAdornment, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +15,7 @@ import PageMeta from "../../../components/common/PageMeta";
 import RepairPhotoUploader from "../../../components/repairs/RepairPhotoUploader";
 import useAuth from "../../../hooks/useAuth";
 import { searchSaleCustomers, type SaleCustomer } from "../../../redux/slices/posRedux/saleRedux";
-import { collectRepairPayment, createRepairJob, deleteRepairImageUpload, getRepairJob, getRepairJobs, updateRepairCharge, updateRepairJobStatus, type RepairJobDetail, type RepairJobInput, type RepairJobListItem, type RepairPaymentMethod, type RepairPhotoAsset, type RepairStatus } from "../../../redux/slices/repairRedux/repairRedux";
+import { addRepairPart, collectRepairPayment, createRepairJob, deleteRepairImageUpload, getRepairJob, getRepairJobs, releaseRepairPart, updateRepairCharge, updateRepairJobStatus, type RepairJobDetail, type RepairJobInput, type RepairJobListItem, type RepairPartStatus, type RepairPaymentMethod, type RepairPhotoAsset, type RepairStatus } from "../../../redux/slices/repairRedux/repairRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
 import { USER_PERMISSIONS } from "../../../utils";
 import { fCurrency } from "../../../utils/formatNumber";
@@ -44,6 +46,8 @@ const paymentMethods: Array<{ label: string; value: RepairPaymentMethod }> = [
 const paymentMethodLabel = (method: RepairPaymentMethod) => paymentMethods.find((item) => item.value === method)?.label ?? method;
 const paymentStatusLabel = (status: RepairJobDetail["paymentStatus"]) => status === "paid" ? "Settled" : status === "partiallyPaid" ? "Partially paid" : "Payment due";
 const paymentStatusColor = (status: RepairJobDetail["paymentStatus"]) => status === "paid" ? "success" : status === "partiallyPaid" ? "warning" : "default";
+const repairPartStatusLabel: Record<RepairPartStatus, string> = { consumed: "Consumed", released: "Released", reserved: "Reserved" };
+const repairPartStatusColor = (status: RepairPartStatus) => status === "consumed" ? "success" : status === "released" ? "default" : "warning";
 
 const emptyForm = {
   customerName: "",
@@ -78,6 +82,7 @@ export default function RepairJobs() {
   const [chargeInput, setChargeInput] = useState("");
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [paymentForm, setPaymentForm] = useState<{ amount: string; method: RepairPaymentMethod; referenceNo: string }>({ amount: "", method: "cash", referenceNo: "" });
+  const [partBarcode, setPartBarcode] = useState("");
   const pageTitle = isPosMode && params.get("create") === "1" ? "Create Repair Job" : "Repair Jobs";
   const hasCustomer = Boolean(
     selectedCustomer?.id ||
@@ -90,8 +95,15 @@ export default function RepairJobs() {
     !isIntakeUploading,
   );
   const canUpdateRepair = can(USER_PERMISSIONS.REPAIRS_UPDATE);
+  const canManageRepairParts = can(USER_PERMISSIONS.REPAIRS_MANAGE_PARTS);
   const canCollectPayment = can(USER_PERMISSIONS.REPAIRS_COLLECT_PAYMENT);
   const canCreateRepairPermission = can(USER_PERMISSIONS.REPAIRS_CREATE);
+  const selectableStatuses = useMemo<RepairStatus[]>(() => {
+    if (!detail) return nextStatuses;
+    if (detail.status === "completed") return ["completed", "delivered"];
+    if (detail.status === "delivered" || detail.status === "cancelled") return [detail.status];
+    return nextStatuses.filter((option) => option !== "delivered");
+  }, [detail]);
 
   const discardUploadedPhotos = (photos: RepairPhotoAsset[]) => {
     if (!photos.length) return;
@@ -118,6 +130,7 @@ export default function RepairJobs() {
     setInspectionPhotos([]);
     setPaymentDialog(false);
     setPaymentForm({ amount: "", method: "cash", referenceNo: "" });
+    setPartBarcode("");
     setChargeInput("");
     setDetail(null);
   };
@@ -180,6 +193,7 @@ export default function RepairJobs() {
       setIsIntakeUploading(false);
       setDetail(job);
       setChargeInput(job.finalCost);
+      setPartBarcode("");
       toast.success(`Repair job ${job.jobNo} created.`);
       printRepairJobReceipt(job);
       void load();
@@ -250,6 +264,42 @@ export default function RepairJobs() {
       void load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to save the final repair charge.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reserveScannedPart = async () => {
+    if (!detail) return;
+    const barcode = partBarcode.trim();
+    if (!barcode) {
+      toast.error("Scan or enter a spare-part barcode.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await addRepairPart(detail.id, { barcode });
+      setDetail(updated);
+      setPartBarcode("");
+      toast.success("Spare part reserved for this repair.");
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to reserve this spare part.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const releasePart = async (partId: number) => {
+    if (!detail) return;
+    setSaving(true);
+    try {
+      const updated = await releaseRepairPart(detail.id, partId);
+      setDetail(updated);
+      toast.success("Spare part returned to available stock.");
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to release this spare part.");
     } finally {
       setSaving(false);
     }
@@ -426,21 +476,64 @@ export default function RepairJobs() {
             <Typography fontWeight={900}>Problem</Typography>
             <Typography whiteSpace="pre-wrap">{detail.problemDescription}</Typography>
           </Card>
+          <Card sx={{ border: 1, borderColor: "divider", p: 2 }}>
+            <Stack alignItems={{ xs: "flex-start", sm: "center" }} direction={{ xs: "column", sm: "row" }} gap={1} justifyContent="space-between" mb={1.5}>
+              <Box>
+                <Stack alignItems="center" direction="row" gap={1}>
+                  <QrCodeScannerRoundedIcon color="primary" fontSize="small" />
+                  <Typography fontWeight={900}>Parts used from stock</Typography>
+                </Stack>
+                <Typography color="text.secondary" variant="body2">Scan each spare-part barcode to reserve it. It is consumed when the repair is completed; released parts immediately return to available stock.</Typography>
+              </Box>
+              <Chip label={`${detail.parts.filter((part) => part.status === "reserved").length} reserved`} size="small" variant="outlined" />
+            </Stack>
+            {canManageRepairParts && !["completed", "delivered", "cancelled"].includes(detail.status) ? <Stack direction={{ xs: "column", sm: "row" }} gap={1.25} mb={detail.parts.length ? 2 : 0}>
+              <TextField
+                autoComplete="off"
+                disabled={saving}
+                fullWidth
+                inputProps={{ maxLength: 64 }}
+                label="Scan spare-part barcode"
+                onChange={(event) => setPartBarcode(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void reserveScannedPart();
+                  }
+                }}
+                placeholder="Scan barcode, then press Enter"
+                value={partBarcode}
+              />
+              <Button disabled={saving || !partBarcode.trim()} onClick={() => void reserveScannedPart()} startIcon={<QrCodeScannerRoundedIcon />} sx={{ minWidth: { sm: 164 } }} variant="outlined">Reserve part</Button>
+            </Stack> : <Typography color="text.secondary" variant="body2">{canManageRepairParts ? "Parts are locked because this repair is complete, delivered, or cancelled." : "You do not have permission to reserve or release repair parts."}</Typography>}
+            {detail.parts.length ? <Box sx={{ mt: 2, overflowX: "auto" }}>
+              <Table size="small" sx={{ minWidth: 580 }}>
+                <TableHead><TableRow><TableCell>Part</TableCell><TableCell>Barcode</TableCell><TableCell>Status</TableCell><TableCell align="right">Action</TableCell></TableRow></TableHead>
+                <TableBody>{detail.parts.map((part) => <TableRow key={part.id}>
+                  <TableCell><Typography fontWeight={800}>{part.productName || part.description}</Typography></TableCell>
+                  <TableCell>{part.barcode || "—"}</TableCell>
+                  <TableCell><Chip color={repairPartStatusColor(part.status)} label={repairPartStatusLabel[part.status]} size="small" /></TableCell>
+                  <TableCell align="right">{part.status === "reserved" && canManageRepairParts && !["completed", "delivered", "cancelled"].includes(detail.status) ? <Button color="inherit" disabled={saving} onClick={() => void releasePart(part.id)} size="small" startIcon={<RemoveCircleOutlineRoundedIcon />}>Release</Button> : "—"}</TableCell>
+                </TableRow>)}</TableBody>
+              </Table>
+            </Box> : null}
+            <Typography color="text.secondary" display="block" mt={detail.parts.length ? 1.5 : 1} variant="caption">Parts are internal inventory records only. Customer receipts show one repair total and never itemize parts or service charges.</Typography>
+          </Card>
           <Card sx={{ border: 1, borderColor: detail.paymentStatus === "paid" ? "success.main" : "divider", p: 2 }}>
             <Stack alignItems={{ xs: "flex-start", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1.5} mb={2}>
               <Box>
                 <Stack alignItems="center" direction="row" gap={1}>
                   <PaymentsRoundedIcon color="primary" fontSize="small" />
-                  <Typography fontWeight={900}>Repair billing</Typography>
+                  <Typography fontWeight={900}>Customer repair total</Typography>
                   <Chip color={paymentStatusColor(detail.paymentStatus)} label={paymentStatusLabel(detail.paymentStatus)} size="small" />
                 </Stack>
-                <Typography color="text.secondary" variant="body2">Set the final charge, collect payment through the active POS drawer, then deliver the device after settlement.</Typography>
+                <Typography color="text.secondary" variant="body2">Set one final amount for the customer, collect it through the active POS drawer, then deliver the device after settlement.</Typography>
               </Box>
               {detail.status === "completed" && detail.balance > 0 && canCollectPayment ? <Button disabled={saving || Number(detail.finalCost) <= 0} onClick={openPaymentCollection} startIcon={<PaymentsRoundedIcon />} variant="contained">Collect payment</Button> : null}
             </Stack>
             <Box sx={{ alignItems: "start", display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(220px, 1.2fr) repeat(2, minmax(140px, .7fr))" } }}>
               <Stack direction="row" gap={1}>
-                <TextField disabled={saving || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} fullWidth helperText="Set before collecting payment." inputProps={{ inputMode: "decimal" }} label="Final repair charge" onChange={(event) => setChargeInput(event.target.value)} value={chargeInput} />
+                <TextField disabled={saving || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} fullWidth helperText="One total only; parts and labour are not itemized for customers." inputProps={{ inputMode: "decimal" }} label="Customer repair total" onChange={(event) => setChargeInput(event.target.value)} value={chargeInput} />
                 {canUpdateRepair && detail.status !== "cancelled" && detail.status !== "delivered" ? <Button disabled={saving} onClick={() => void saveFinalCharge()} startIcon={<PriceCheckRoundedIcon />} sx={{ alignSelf: "flex-start", minWidth: 92 }} variant="outlined">Save</Button> : null}
               </Stack>
               <Card sx={{ bgcolor: "action.hover", p: 1.5 }} variant="outlined"><Typography color="text.secondary" variant="caption">Total paid</Typography><Typography fontWeight={900} variant="h6">{fCurrency(detail.totalPaid)}</Typography></Card>
@@ -451,12 +544,12 @@ export default function RepairJobs() {
             {detail.payments.length ? <><Divider sx={{ my: 2 }} /><Typography fontWeight={800} mb={1}>Payment history</Typography><Box sx={{ overflowX: "auto" }}><Table size="small" sx={{ minWidth: 690 }}><TableHead><TableRow><TableCell>Received</TableCell><TableCell>Method</TableCell><TableCell>Reference</TableCell><TableCell>Cashier</TableCell><TableCell align="right">Amount</TableCell><TableCell align="right">Receipt</TableCell></TableRow></TableHead><TableBody>{detail.payments.map((payment) => <TableRow key={payment.id}><TableCell>{dateTime(payment.timestamp)}</TableCell><TableCell>{paymentMethodLabel(payment.method)}</TableCell><TableCell>{payment.referenceNo || "—"}</TableCell><TableCell>{payment.receivedByName}</TableCell><TableCell align="right">{fCurrency(Number(payment.amount))}</TableCell><TableCell align="right"><Button onClick={() => reprintRepairPaymentReceipt(payment)} size="small" startIcon={<LocalPrintshopRoundedIcon />}>Print</Button></TableCell></TableRow>)}</TableBody></Table></Box></> : null}
           </Card>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <TextField disabled={saving || isInspectionUploading || !canUpdateRepair} label="Next status" onChange={(event) => changeStatus(event.target.value as RepairStatus)} select value={newStatus}>
-              {nextStatuses.map((option) => <MenuItem disabled={option === "delivered" && (detail.status !== "completed" || detail.balance > 0)} key={option} value={option}>{statusLabel(option)}</MenuItem>)}
+            <TextField disabled={saving || isInspectionUploading || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} label="Next status" onChange={(event) => changeStatus(event.target.value as RepairStatus)} select value={newStatus}>
+              {selectableStatuses.map((option) => <MenuItem disabled={option === "delivered" && detail.balance > 0} key={option} value={option}>{statusLabel(option)}</MenuItem>)}
             </TextField>
             <Button disabled={saving} onClick={() => printRepairJobReceipt(detail)} startIcon={<LocalPrintshopRoundedIcon />} variant="outlined">Reprint receipt</Button>
           </Box>
-          <TextField label="Status note" minRows={2} multiline onChange={(event) => setStatusNote(event.target.value)} value={statusNote} />
+          <TextField disabled={saving || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} label="Status note" minRows={2} multiline onChange={(event) => setStatusNote(event.target.value)} value={statusNote} />
           {newStatus === "inspection" && newStatus !== detail.status ? <RepairPhotoUploader description="Required before customers can see the inspection stage. These images are shown only through this repair's secure receipt link." disabled={saving} label="Inspection photos" onChange={setInspectionPhotos} onUploadStateChange={setIsInspectionUploading} photos={inspectionPhotos} required /> : null}
           {detail.documents.length ? <RepairPhotoGallery documents={detail.documents} /> : null}
           <Card sx={{ p: 2 }}>
@@ -473,7 +566,7 @@ export default function RepairJobs() {
       </DialogContent>
       <DialogActions>
         <Button color="inherit" disabled={saving || isInspectionUploading} onClick={closeDetailDialog}>Close</Button>
-        <Button disabled={saving || isInspectionUploading || !canUpdateRepair || !detail || newStatus === detail.status} onClick={() => void saveStatus()} variant="contained">Update Status</Button>
+        <Button disabled={saving || isInspectionUploading || !canUpdateRepair || !detail || detail.status === "cancelled" || detail.status === "delivered" || newStatus === detail.status} onClick={() => void saveStatus()} variant="contained">Update Status</Button>
       </DialogActions>
     </Dialog>
 
@@ -488,7 +581,7 @@ export default function RepairJobs() {
       <DialogContent dividers>
         {detail ? <Stack spacing={2}>
           <Box sx={{ bgcolor: "action.hover", borderRadius: 2, display: "grid", gap: 1, gridTemplateColumns: "1fr 1fr", p: 1.5 }}>
-            <Box><Typography color="text.secondary" variant="caption">Final charge</Typography><Typography fontWeight={900}>{fCurrency(Number(detail.finalCost))}</Typography></Box>
+            <Box><Typography color="text.secondary" variant="caption">Repair total</Typography><Typography fontWeight={900}>{fCurrency(Number(detail.finalCost))}</Typography></Box>
             <Box><Typography color="text.secondary" variant="caption">Already paid</Typography><Typography fontWeight={900}>{fCurrency(detail.totalPaid)}</Typography></Box>
             <Box sx={{ gridColumn: "1 / -1" }}><Typography color="text.secondary" variant="caption">Balance due</Typography><Typography color="primary.main" fontWeight={900} variant="h6">{fCurrency(detail.balance)}</Typography></Box>
           </Box>
