@@ -19,6 +19,7 @@ import { fCurrency } from "../../../utils/formatNumber";
 import { printSaleReceipt } from "../../../utils/printSaleReceipt";
 
 type CartItem = {
+  availableStockIds: number[];
   id: string;
   productId: number;
   productName: string;
@@ -47,12 +48,15 @@ const methods: Array<{ label: string; value: PaymentMethod }> = [
 const toAmount = (value: string) => Number(value.replace(/[^\d.]/g, "")) || 0;
 const looksLikePhone = (value: string) => /^[+\d\s-]{6,}$/.test(value.trim());
 const maxLineDiscount = (item: Pick<CartItem, "lowestSellingPrice" | "quantity" | "unitPrice">) => Math.max(0, item.unitPrice * item.quantity - item.lowestSellingPrice * item.quantity);
+const uniqueStockIds = (values: number[]) => Array.from(new Set(values));
 
 export default function NewSale() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const locationId = user?.defaultLocationId ?? null;
   const productInputRef = useRef<HTMLInputElement | null>(null);
+  const productSearchRequestRef = useRef(0);
+  const scannerLookupInFlightRef = useRef(false);
   const [drawer, setDrawer] = useState<PosDrawer | null>(null);
   const [drawerLoaded, setDrawerLoaded] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -80,10 +84,14 @@ export default function NewSale() {
 
   useEffect(() => {
     const search = productSearch.trim();
+    const requestId = ++productSearchRequestRef.current;
     if (!search || !locationId) { setProductOptions([]); return; }
     const timer = window.setTimeout(() => {
-      searchSaleProducts({ locationId, search }).then(setProductOptions)
-        .catch((error) => toast.error(error instanceof Error ? error.message : "Unable to search products."));
+      searchSaleProducts({ locationId, search }).then((results) => {
+        if (productSearchRequestRef.current === requestId) setProductOptions(results);
+      }).catch((error) => {
+        if (productSearchRequestRef.current === requestId) toast.error(error instanceof Error ? error.message : "Unable to search products.");
+      });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [locationId, productSearch]);
@@ -106,17 +114,26 @@ export default function NewSale() {
 
   const addProduct = (product: SaleProductSearchItem | null) => {
     if (!product) return;
-    const stockIds = product.stockIds.length ? product.stockIds : product.stockId ? [product.stockId] : [];
-    if (!stockIds.length) { toast.error("This product has no available stock units."); return; }
+    const availableStockIds = uniqueStockIds(product.stockIds.length ? product.stockIds : product.stockId ? [product.stockId] : []);
+    if (!availableStockIds.length) { toast.error("This product has no available stock units."); return; }
     const mrpPrice = Number(product.mrpPrice);
     const lowestSellingPrice = Number(product.sellingPrice);
     const costPrice = Number(product.costPrice);
     const existing = items.find((item) => item.productId === product.productId && item.unitPrice === mrpPrice);
     if (existing) {
-      if (existing.quantity >= existing.quantityAvailable) { toast.error("No more available units for this product."); return; }
-      setItems((current) => current.map((item) => item.id === existing.id ? { ...item, quantity: item.quantity + 1, stockIds: stockIds.slice(0, item.quantity + 1) } : item));
+      const nextAvailableStockIds = uniqueStockIds([...existing.availableStockIds, ...availableStockIds]);
+      const nextStockId = nextAvailableStockIds.find((stockId) => !existing.stockIds.includes(stockId));
+      if (!nextStockId) { toast.error("This exact stock unit is already on the bill."); return; }
+      setItems((current) => current.map((item) => item.id === existing.id ? {
+        ...item,
+        availableStockIds: nextAvailableStockIds,
+        quantity: item.quantity + 1,
+        quantityAvailable: Math.max(item.quantityAvailable, product.quantityAvailable, nextAvailableStockIds.length),
+        stockIds: [...item.stockIds, nextStockId],
+      } : item));
     } else {
       setItems((current) => [...current, {
+        availableStockIds,
         discountAmount: 0,
         id: `${product.productId}-${Date.now()}`,
         costPrice,
@@ -127,13 +144,35 @@ export default function NewSale() {
         productSku: product.productSku,
         quantity: 1,
         quantityAvailable: product.quantityAvailable,
-        stockIds,
+        stockIds: [availableStockIds[0]],
         unitPrice: mrpPrice,
       }]);
     }
     setProductSearch("");
     setProductOptions([]);
     window.setTimeout(() => productInputRef.current?.focus(), 0);
+  };
+
+  const scanAndAddExactProduct = async () => {
+    const search = productInputRef.current?.value.trim() || productSearch.trim();
+    if (!search || !locationId || scannerLookupInFlightRef.current) return;
+    scannerLookupInFlightRef.current = true;
+    const requestId = ++productSearchRequestRef.current;
+    try {
+      const results = await searchSaleProducts({ locationId, search });
+      if (productSearchRequestRef.current !== requestId) return;
+      const exactUnitMatches = results.filter((product) => product.matchType === "barcode" || product.matchType === "imei" || product.matchType === "serial");
+      if (exactUnitMatches.length === 1) {
+        addProduct(exactUnitMatches[0]);
+        return;
+      }
+      setProductOptions(results);
+      if (!results.length) toast.error("No available stock unit was found for this barcode or identifier.");
+    } catch (error) {
+      if (productSearchRequestRef.current === requestId) toast.error(error instanceof Error ? error.message : "Unable to scan this product.");
+    } finally {
+      scannerLookupInFlightRef.current = false;
+    }
   };
 
   const create = async () => {
@@ -294,9 +333,12 @@ export default function NewSale() {
                 getOptionLabel={(option) => `${option.productName} (${option.quantityAvailable} available)`}
                 inputValue={productSearch}
                 onChange={(_event, value) => addProduct(value)}
-                onInputChange={(_event, value) => setProductSearch(value)}
+                onInputChange={(_event, value, reason) => {
+                  setProductSearch(value);
+                  if (reason === "input") setProductOptions([]);
+                }}
                 options={productOptions}
-                renderInput={(params) => <TextField {...params} autoFocus inputRef={productInputRef} label="Scan barcode / IMEI / serial or search product" onKeyDown={(event) => { if (event.key === "Enter" && productOptions.length === 1) { event.preventDefault(); addProduct(productOptions[0]); } }} slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><SearchRoundedIcon /></InputAdornment> } }} />}
+                renderInput={(params) => <TextField {...params} autoComplete="off" autoFocus inputRef={productInputRef} label="Scan barcode / IMEI / serial or search product" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void scanAndAddExactProduct(); } }} slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><SearchRoundedIcon /></InputAdornment> } }} />}
                 renderOption={(props, option) => <Box component="li" {...props}><Stack width="100%"><Stack direction="row" justifyContent="space-between"><Typography fontWeight={700}>{option.productName}</Typography><Chip label={option.matchType} size="small" /></Stack><Typography color="text.secondary" variant="caption">{option.productSku ?? `Product #${option.productId}`} • {option.locationName} • {option.quantityAvailable} available • MRP {fCurrency(Number(option.mrpPrice))} • Floor {fCurrency(Number(option.sellingPrice))} • Cost {fCurrency(Number(option.costPrice))}</Typography></Stack></Box>}
               />
             </Stack>
@@ -318,7 +360,7 @@ export default function NewSale() {
               <Typography color="text.secondary" variant="body2">Scan a barcode or search product name to start the bill.</Typography>
             </Stack> : <Stack divider={<Divider flexItem />}>
               {items.map((item) => {
-                const nextQty = (value: string) => Math.min(item.quantityAvailable, Math.max(1, Math.trunc(toAmount(value))));
+                const nextQty = (value: string) => Math.min(item.availableStockIds.length, Math.max(1, Math.trunc(toAmount(value))));
                 const nextPrice = (value: string) => Math.min(item.mrpPrice, toAmount(value));
                 return <Box key={item.id} sx={{
                   alignItems: "center",
@@ -338,7 +380,14 @@ export default function NewSale() {
                   </Box>
                   <TextField
                     inputProps={{ inputMode: "numeric", pattern: "[0-9]*", style: { textAlign: "center" } }}
-                    onChange={(event) => setItems((current) => current.map((row) => row.id === item.id ? { ...row, discountAmount: Math.min(row.discountAmount, maxLineDiscount({ ...row, quantity: nextQty(event.target.value) })), quantity: nextQty(event.target.value), stockIds: row.stockIds.slice(0, nextQty(event.target.value)) } : row))}
+                    onChange={(event) => setItems((current) => current.map((row) => {
+                      if (row.id !== item.id) return row;
+                      const quantity = nextQty(event.target.value);
+                      const selectedStockIds = quantity <= row.stockIds.length
+                        ? row.stockIds.slice(0, quantity)
+                        : [...row.stockIds, ...row.availableStockIds.filter((stockId) => !row.stockIds.includes(stockId)).slice(0, quantity - row.stockIds.length)];
+                      return { ...row, discountAmount: Math.min(row.discountAmount, maxLineDiscount({ ...row, quantity })), quantity, stockIds: selectedStockIds };
+                    }))}
                     size="small"
                     value={String(item.quantity)}
                   />

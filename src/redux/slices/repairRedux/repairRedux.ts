@@ -1,11 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { get, patch, post } from "../../../inteceptor";
+import { deleteMethod, get, patch, post } from "../../../inteceptor";
 import { dispatch } from "../../store";
 import { deleteMediaImage, uploadMediaImage, type MediaImageAsset } from "../../../utils/mediaImageUpload";
 
 export type RepairStatus = "received" | "inspection" | "waitingParts" | "inProgress" | "completed" | "delivered" | "cancelled";
 export type RepairPaymentMethod = "cash" | "card" | "bankTransfer" | "mobile";
 export type RepairPaymentStatus = "unpaid" | "partiallyPaid" | "paid";
+export type RepairPartStatus = "reserved" | "consumed" | "released";
 
 export type RepairPhotoAsset = MediaImageAsset;
 
@@ -45,6 +46,7 @@ export type RepairJobDetail = RepairJobListItem & {
   publicStatusToken: string;
   documents: RepairDocument[];
   history: Array<{ id: number; newStatus: string; note: string | null; oldStatus: string | null; timestamp: number; userName: string }>;
+  parts: RepairPart[];
   paymentStatus: RepairPaymentStatus;
   payments: RepairPayment[];
   totalPaid: number;
@@ -58,6 +60,19 @@ export type RepairPayment = {
   receivedBy: number;
   receivedByName: string;
   referenceNo: string | null;
+  timestamp: number;
+};
+
+export type RepairPart = {
+  barcode: string | null;
+  consumedAt: number | null;
+  description: string;
+  id: number;
+  productId: number | null;
+  productName: string | null;
+  releasedAt: number | null;
+  status: RepairPartStatus;
+  stockId: number | null;
   timestamp: number;
 };
 
@@ -137,6 +152,12 @@ export const updateRepairJobStatus = async (id: number, input: { inspectionPhoto
 
 export const updateRepairCharge = async (id: number, input: { finalCost: number }) =>
   (await patch<RepairJobDetail, typeof input>(`repairs/${id}/charge`, input, undefined, false)).data;
+
+export const addRepairPart = async (id: number, input: { barcode: string }) =>
+  (await post<RepairJobDetail, typeof input>(`repairs/${id}/parts`, input, undefined, false)).data;
+
+export const releaseRepairPart = async (id: number, partId: number) =>
+  (await deleteMethod<RepairJobDetail, Record<string, never>>(`repairs/${id}/parts/${partId}`, {}, undefined, false)).data;
 
 export const collectRepairPayment = async (id: number, input: { amount: number; method: RepairPaymentMethod; referenceNo?: string }) =>
   (await post<RepairPaymentResult, typeof input>(`repairs/${id}/payments`, input, undefined, false)).data;
