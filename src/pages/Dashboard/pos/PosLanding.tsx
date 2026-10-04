@@ -1,6 +1,7 @@
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import LocalAtmRoundedIcon from "@mui/icons-material/LocalAtmRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
@@ -11,8 +12,10 @@ import { useEffect, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import PageMeta from "../../../components/common/PageMeta";
+import useAuth from "../../../hooks/useAuth";
 import { closeDrawer, getCurrentDrawer, openDrawer, type CloseDrawerResult, type PosDrawer } from "../../../redux/slices/posRedux/drawerRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
+import { USER_PERMISSIONS } from "../../../utils";
 import { fCurrency } from "../../../utils/formatNumber";
 import { printDrawerSummaryReceipt } from "../../../utils/printDrawerSummaryReceipt";
 
@@ -59,6 +62,7 @@ function ActionCard({ description, disabled, icon, label, onClick, to }: ActionC
 
 export default function PosLanding() {
   const navigate = useNavigate();
+  const { can } = useAuth();
   const [drawer, setDrawer] = useState<PosDrawer | null>(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -66,11 +70,12 @@ export default function PosLanding() {
   const [openNote, setOpenNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
-  const [closeForm, setCloseForm] = useState({ bank: "", card: "", cash: "", expense: "", note: "" });
+  const [closeForm, setCloseForm] = useState({ bank: "", card: "", cash: "", expense: "", mobile: "", note: "" });
   const [lastClose, setLastClose] = useState<CloseDrawerResult | null>(null);
   const countedCash = amount(closeForm.cash);
   const countedCardTotal = amount(closeForm.card);
   const countedBankTransferTotal = amount(closeForm.bank);
+  const countedMobileTotal = amount(closeForm.mobile);
   const cashExpenseAmount = amount(closeForm.expense);
 
   const load = async () => {
@@ -111,6 +116,7 @@ export default function PosLanding() {
         countedBankTransferTotal,
         countedCardTotal,
         countedCash,
+        countedMobileTotal,
         note: closeForm.note.trim() || undefined,
       };
       const closed = await closeDrawer({
@@ -118,13 +124,14 @@ export default function PosLanding() {
         countedBankTransferTotal: closeInputs.countedBankTransferTotal,
         countedCardTotal: closeInputs.countedCardTotal,
         countedCash: closeInputs.countedCash,
+        countedMobileTotal: closeInputs.countedMobileTotal,
         note: closeInputs.note,
       });
       setLastClose(closed);
       printDrawerSummaryReceipt(drawer, closed, closeInputs);
       setDrawer(null);
       setCloseOpen(false);
-      setCloseForm({ bank: "", card: "", cash: "", expense: "", note: "" });
+      setCloseForm({ bank: "", card: "", cash: "", expense: "", mobile: "", note: "" });
       toast.success(`Drawer closed. Difference ${fCurrency(closed.difference)}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to close POS drawer.");
@@ -163,7 +170,7 @@ export default function PosLanding() {
           <Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1}>
             <Box>
               <Typography fontWeight={900}>Last drawer closed</Typography>
-              <Typography color="text.secondary" variant="body2">{lastClose.summary.salesCount} sales • Total {fCurrency(lastClose.summary.totalAmount)}</Typography>
+              <Typography color="text.secondary" variant="body2">{lastClose.summary.salesCount} sales • {lastClose.summary.repairPaymentCount} repair payments • Total {fCurrency(lastClose.summary.totalAmount + lastClose.summary.repairPaymentTotal)}</Typography>
             </Box>
             <Chip color={lastClose.difference === 0 ? "success" : "warning"} label={`Cash difference ${fCurrency(lastClose.difference)}`} />
           </Stack>
@@ -186,7 +193,8 @@ export default function PosLanding() {
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" } }}>
             <ActionCard description="Scan item, choose customer, collect payment." icon={<PointOfSaleRoundedIcon />} label="Create Sale" to={`${PATH_DASHBOARD.pos.newSale}?mode=pos`} />
             <ActionCard description="Review and re-print invoices." icon={<ReceiptLongRoundedIcon />} label="Sales List" to={`${PATH_DASHBOARD.pos.sales}?mode=pos`} />
-            <ActionCard description="Receive customer devices and print job receipt." icon={<BuildRoundedIcon />} label="Create Repair Job" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&create=1`} />
+            {can(USER_PERMISSIONS.REPAIRS_CREATE) ? <ActionCard description="Receive customer devices and print job receipt." icon={<BuildRoundedIcon />} label="Create Repair Job" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&create=1`} /> : null}
+            {can(USER_PERMISSIONS.REPAIRS_VIEW) && can(USER_PERMISSIONS.REPAIRS_COLLECT_PAYMENT) ? <ActionCard description="Collect payment for completed repair jobs." icon={<PaymentsRoundedIcon />} label="Repair Payments" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&status=completed`} /> : null}
             <ActionCard description="Future warranty workflow." disabled icon={<ShieldRoundedIcon />} label="Warranty Claim" />
           </Box>
           </Stack>
@@ -234,6 +242,7 @@ export default function PosLanding() {
           <TextField autoFocus inputProps={{ inputMode: "decimal" }} label="Counted cash amount" onChange={(event) => setCloseForm((current) => ({ ...current, cash: event.target.value }))} value={closeForm.cash} />
           <TextField inputProps={{ inputMode: "decimal" }} label="Card total from card machine" onChange={(event) => setCloseForm((current) => ({ ...current, card: event.target.value }))} value={closeForm.card} />
           <TextField inputProps={{ inputMode: "decimal" }} label="Bank transfer total" onChange={(event) => setCloseForm((current) => ({ ...current, bank: event.target.value }))} value={closeForm.bank} />
+          <TextField inputProps={{ inputMode: "decimal" }} label="Mobile payment total" onChange={(event) => setCloseForm((current) => ({ ...current, mobile: event.target.value }))} value={closeForm.mobile} />
           <TextField inputProps={{ inputMode: "decimal" }} label="Cash expense / petty cash" onChange={(event) => setCloseForm((current) => ({ ...current, expense: event.target.value }))} value={closeForm.expense} />
           <Divider />
           <TextField label="Note / mismatch reason" minRows={3} multiline onChange={(event) => setCloseForm((current) => ({ ...current, note: event.target.value }))} value={closeForm.note} />

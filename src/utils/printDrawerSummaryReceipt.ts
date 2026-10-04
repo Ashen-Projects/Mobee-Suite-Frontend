@@ -10,6 +10,7 @@ type CloseInputs = {
   countedBankTransferTotal: number;
   countedCardTotal: number;
   countedCash: number;
+  countedMobileTotal: number;
   cashExpenseAmount: number;
   note?: string;
 };
@@ -30,8 +31,9 @@ const row = (label: string, value: string, strong = false) => `
 export const printDrawerSummaryReceipt = (drawer: PosDrawer, result: CloseDrawerResult, inputs: CloseInputs) => {
   const printedAt = formatDateTime(Date.now());
   const closedAt = Date.now();
-  const cardDifference = inputs.countedCardTotal - result.summary.cardSales;
-  const bankDifference = inputs.countedBankTransferTotal - result.summary.bankTransferSales;
+  const cardDifference = inputs.countedCardTotal - result.summary.expectedCardTotal;
+  const bankDifference = inputs.countedBankTransferTotal - result.summary.expectedBankTransferTotal;
+  const mobileDifference = inputs.countedMobileTotal - result.summary.expectedMobileTotal;
   const cashDifference = result.difference;
   const win = window.open("", "_blank", "width=420,height=720");
   if (!win) return;
@@ -87,13 +89,22 @@ export const printDrawerSummaryReceipt = (drawer: PosDrawer, result: CloseDrawer
       ${row("Cash sales", fCurrency(result.summary.cashSales))}
       ${row("Card sales", fCurrency(result.summary.cardSales))}
       ${row("Bank transfer", fCurrency(result.summary.bankTransferSales))}
+      ${row("Mobile sales", fCurrency(result.summary.mobileSales))}
       ${row("Discounts", fCurrency(result.summary.discountAmount))}
       ${row("Total sales", fCurrency(result.summary.totalAmount), true)}
+      <div class="section-title">Repair payments</div>
+      ${row("Repair payments", String(result.summary.repairPaymentCount))}
+      ${row("Cash repairs", fCurrency(result.summary.cashRepairPayments))}
+      ${row("Card repairs", fCurrency(result.summary.cardRepairPayments))}
+      ${row("Bank repairs", fCurrency(result.summary.bankTransferRepairPayments))}
+      ${row("Mobile repairs", fCurrency(result.summary.mobileRepairPayments))}
+      ${row("Total repair payments", fCurrency(result.summary.repairPaymentTotal), true)}
       <div class="line"></div>
       <div class="section-title">Cashier counted</div>
       ${row("Counted cash", fCurrency(inputs.countedCash))}
       ${row("Counted card", fCurrency(inputs.countedCardTotal))}
       ${row("Counted bank", fCurrency(inputs.countedBankTransferTotal))}
+      ${row("Counted mobile", fCurrency(inputs.countedMobileTotal))}
       ${row("Cash expenses", fCurrency(inputs.cashExpenseAmount))}
       ${row("Expected cash", fCurrency(result.summary.expectedCash), true)}
       <div class="${cashDifference === 0 ? "row strong difference ok" : "row strong difference bad"}">
@@ -102,6 +113,7 @@ export const printDrawerSummaryReceipt = (drawer: PosDrawer, result: CloseDrawer
       </div>
       ${row("Card difference", fCurrency(cardDifference))}
       ${row("Bank difference", fCurrency(bankDifference))}
+      ${row("Mobile difference", fCurrency(mobileDifference))}
       ${inputs.note ? `<div class="section-title">Note</div><div class="note">${escapeHtml(inputs.note)}</div>` : ""}
       <div class="line"></div>
       <p class="center muted">Printed ${printedAt}</p>

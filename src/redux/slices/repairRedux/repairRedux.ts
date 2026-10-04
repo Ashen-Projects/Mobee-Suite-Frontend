@@ -4,6 +4,8 @@ import { dispatch } from "../../store";
 import { deleteMediaImage, uploadMediaImage, type MediaImageAsset } from "../../../utils/mediaImageUpload";
 
 export type RepairStatus = "received" | "inspection" | "waitingParts" | "inProgress" | "completed" | "delivered" | "cancelled";
+export type RepairPaymentMethod = "cash" | "card" | "bankTransfer" | "mobile";
+export type RepairPaymentStatus = "unpaid" | "partiallyPaid" | "paid";
 
 export type RepairPhotoAsset = MediaImageAsset;
 
@@ -36,12 +38,32 @@ export type RepairJobDetail = RepairJobListItem & {
   assignedToName: string | null;
   customerId: number;
   finalCost: string;
+  balance: number;
   locationId: number;
   problemDescription: string;
   publicStatusPath: string;
   publicStatusToken: string;
   documents: RepairDocument[];
   history: Array<{ id: number; newStatus: string; note: string | null; oldStatus: string | null; timestamp: number; userName: string }>;
+  paymentStatus: RepairPaymentStatus;
+  payments: RepairPayment[];
+  totalPaid: number;
+};
+
+export type RepairPayment = {
+  amount: string;
+  drawerId: number | null;
+  id: number;
+  method: RepairPaymentMethod;
+  receivedBy: number;
+  receivedByName: string;
+  referenceNo: string | null;
+  timestamp: number;
+};
+
+export type RepairPaymentResult = {
+  detail: RepairJobDetail;
+  payment: RepairPayment;
 };
 
 export type RepairJobInput = {
@@ -112,6 +134,12 @@ export const createRepairJob = async (input: RepairJobInput) =>
 
 export const updateRepairJobStatus = async (id: number, input: { inspectionPhotos?: RepairPhotoInput[]; note?: string; status: RepairStatus }) =>
   (await patch<RepairJobDetail, typeof input>(`repairs/${id}/status`, input, undefined, false)).data;
+
+export const updateRepairCharge = async (id: number, input: { finalCost: number }) =>
+  (await patch<RepairJobDetail, typeof input>(`repairs/${id}/charge`, input, undefined, false)).data;
+
+export const collectRepairPayment = async (id: number, input: { amount: number; method: RepairPaymentMethod; referenceNo?: string }) =>
+  (await post<RepairPaymentResult, typeof input>(`repairs/${id}/payments`, input, undefined, false)).data;
 
 export const uploadRepairImage = async (file: File): Promise<{ publicId: string; url: string }> => {
   return uploadMediaImage(file, "mobee/repairs");

@@ -2,18 +2,23 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import LocalPrintshopRoundedIcon from "@mui/icons-material/LocalPrintshopRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import PriceCheckRoundedIcon from "@mui/icons-material/PriceCheckRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import { Autocomplete, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, InputAdornment, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { Autocomplete, Box, Button, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, InputAdornment, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "react-toastify";
 import PageMeta from "../../../components/common/PageMeta";
 import RepairPhotoUploader from "../../../components/repairs/RepairPhotoUploader";
+import useAuth from "../../../hooks/useAuth";
 import { searchSaleCustomers, type SaleCustomer } from "../../../redux/slices/posRedux/saleRedux";
-import { createRepairJob, deleteRepairImageUpload, getRepairJob, getRepairJobs, updateRepairJobStatus, type RepairJobDetail, type RepairJobInput, type RepairJobListItem, type RepairPhotoAsset, type RepairStatus } from "../../../redux/slices/repairRedux/repairRedux";
+import { collectRepairPayment, createRepairJob, deleteRepairImageUpload, getRepairJob, getRepairJobs, updateRepairCharge, updateRepairJobStatus, type RepairJobDetail, type RepairJobInput, type RepairJobListItem, type RepairPaymentMethod, type RepairPhotoAsset, type RepairStatus } from "../../../redux/slices/repairRedux/repairRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
+import { USER_PERMISSIONS } from "../../../utils";
 import { fCurrency } from "../../../utils/formatNumber";
 import { printRepairJobReceipt } from "../../../utils/printRepairJobReceipt";
+import { printRepairPaymentReceipt } from "../../../utils/printRepairPaymentReceipt";
 
 const statusOptions: Array<{ label: string; value: RepairStatus | "all" }> = [
   { label: "All statuses", value: "all" },
@@ -30,6 +35,15 @@ const nextStatuses: RepairStatus[] = ["received", "inspection", "waitingParts", 
 const statusLabel = (status: RepairStatus) => statusOptions.find((item) => item.value === status)?.label ?? status;
 const amount = (value: string) => Number(value.replace(/[^\d.]/g, "")) || 0;
 const dateTime = (value: number) => new Date(value).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
+const paymentMethods: Array<{ label: string; value: RepairPaymentMethod }> = [
+  { label: "Cash", value: "cash" },
+  { label: "Card", value: "card" },
+  { label: "Bank transfer", value: "bankTransfer" },
+  { label: "Mobile payment", value: "mobile" },
+];
+const paymentMethodLabel = (method: RepairPaymentMethod) => paymentMethods.find((item) => item.value === method)?.label ?? method;
+const paymentStatusLabel = (status: RepairJobDetail["paymentStatus"]) => status === "paid" ? "Settled" : status === "partiallyPaid" ? "Partially paid" : "Payment due";
+const paymentStatusColor = (status: RepairJobDetail["paymentStatus"]) => status === "paid" ? "success" : status === "partiallyPaid" ? "warning" : "default";
 
 const emptyForm = {
   customerName: "",
@@ -42,11 +56,12 @@ const emptyForm = {
 
 export default function RepairJobs() {
   const navigate = useNavigate();
+  const { can } = useAuth();
   const [params] = useSearchParams();
   const isPosMode = params.get("mode") === "pos";
   const [jobs, setJobs] = useState<RepairJobListItem[]>([]);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<RepairStatus | "all">("all");
+  const [status, setStatus] = useState<RepairStatus | "all">(() => params.get("status") === "completed" ? "completed" : "all");
   const [open, setOpen] = useState(params.get("create") === "1");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -60,7 +75,10 @@ export default function RepairJobs() {
   const [inspectionPhotos, setInspectionPhotos] = useState<RepairPhotoAsset[]>([]);
   const [isIntakeUploading, setIsIntakeUploading] = useState(false);
   const [isInspectionUploading, setIsInspectionUploading] = useState(false);
-  const pageTitle = isPosMode ? "Create Repair Job" : "Repair Jobs";
+  const [chargeInput, setChargeInput] = useState("");
+  const [paymentDialog, setPaymentDialog] = useState(false);
+  const [paymentForm, setPaymentForm] = useState<{ amount: string; method: RepairPaymentMethod; referenceNo: string }>({ amount: "", method: "cash", referenceNo: "" });
+  const pageTitle = isPosMode && params.get("create") === "1" ? "Create Repair Job" : "Repair Jobs";
   const hasCustomer = Boolean(
     selectedCustomer?.id ||
     (form.customerName.trim() && form.customerPhone.trim()),
@@ -71,6 +89,9 @@ export default function RepairJobs() {
     form.problemDescription.trim() &&
     !isIntakeUploading,
   );
+  const canUpdateRepair = can(USER_PERMISSIONS.REPAIRS_UPDATE);
+  const canCollectPayment = can(USER_PERMISSIONS.REPAIRS_COLLECT_PAYMENT);
+  const canCreateRepairPermission = can(USER_PERMISSIONS.REPAIRS_CREATE);
 
   const discardUploadedPhotos = (photos: RepairPhotoAsset[]) => {
     if (!photos.length) return;
@@ -95,6 +116,9 @@ export default function RepairJobs() {
     if (saving || isInspectionUploading) return;
     discardUploadedPhotos(inspectionPhotos);
     setInspectionPhotos([]);
+    setPaymentDialog(false);
+    setPaymentForm({ amount: "", method: "cash", referenceNo: "" });
+    setChargeInput("");
     setDetail(null);
   };
 
@@ -155,6 +179,7 @@ export default function RepairJobs() {
       setIntakePhotos([]);
       setIsIntakeUploading(false);
       setDetail(job);
+      setChargeInput(job.finalCost);
       toast.success(`Repair job ${job.jobNo} created.`);
       printRepairJobReceipt(job);
       void load();
@@ -173,6 +198,7 @@ export default function RepairJobs() {
       setInspectionPhotos([]);
       setIsInspectionUploading(false);
       setDetail(job);
+      setChargeInput(job.finalCost);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to open repair job.");
     }
@@ -213,6 +239,83 @@ export default function RepairJobs() {
     setNewStatus(nextStatus);
   };
 
+  const saveFinalCharge = async () => {
+    if (!detail) return;
+    setSaving(true);
+    try {
+      const updated = await updateRepairCharge(detail.id, { finalCost: amount(chargeInput) });
+      setDetail(updated);
+      setChargeInput(updated.finalCost);
+      toast.success("Final repair charge saved.");
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save the final repair charge.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openPaymentCollection = () => {
+    if (!detail) return;
+    if (Number(detail.finalCost) <= 0) {
+      toast.error("Set the final repair charge before collecting payment.");
+      return;
+    }
+    setPaymentForm({ amount: detail.balance.toFixed(2), method: "cash", referenceNo: "" });
+    setPaymentDialog(true);
+  };
+
+  const submitRepairPayment = async () => {
+    if (!detail) return;
+    const received = amount(paymentForm.amount);
+    if (received <= 0) {
+      toast.error("Enter a payment amount greater than zero.");
+      return;
+    }
+    if (received > detail.balance) {
+      toast.error(`Payment cannot exceed the remaining balance of ${fCurrency(detail.balance)}.`);
+      return;
+    }
+    if (paymentForm.method !== "cash" && !paymentForm.referenceNo.trim()) {
+      toast.error("Enter the payment reference for this non-cash payment.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await collectRepairPayment(detail.id, {
+        amount: received,
+        method: paymentForm.method,
+        referenceNo: paymentForm.referenceNo.trim() || undefined,
+      });
+      setDetail(result.detail);
+      setChargeInput(result.detail.finalCost);
+      setPaymentDialog(false);
+      setPaymentForm({ amount: "", method: "cash", referenceNo: "" });
+      toast.success(result.detail.balance === 0 ? "Repair payment completed." : "Partial repair payment recorded.");
+      try {
+        printRepairPaymentReceipt(result.detail, result.payment);
+      } catch (error) {
+        toast.info(error instanceof Error ? error.message : "Payment recorded. Reprint the receipt from the repair job when ready.");
+      }
+      void load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to collect the repair payment.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reprintRepairPaymentReceipt = (payment: RepairJobDetail["payments"][number]) => {
+    if (!detail) return;
+    const paymentIndex = detail.payments.findIndex((item) => item.id === payment.id);
+    const totalPaidAtReceipt = detail.payments.slice(0, paymentIndex + 1).reduce((total, item) => total + Number(item.amount), 0);
+    try {
+      printRepairPaymentReceipt({ ...detail, balance: Math.max(0, Number(detail.finalCost) - totalPaidAtReceipt), totalPaid: totalPaidAtReceipt }, payment);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to print this repair payment receipt.");
+    }
+  };
+
   return <>
     <PageMeta description="Create and manage customer repair jobs." title={`${pageTitle} | Mobee Suite`} />
     <Box sx={isPosMode ? { bgcolor: "background.default", inset: 0, overflow: "auto", p: { xs: 2, md: 3 }, position: "fixed", zIndex: (theme) => theme.zIndex.modal - 1 } : undefined}>
@@ -224,7 +327,7 @@ export default function RepairJobs() {
           </Stack>
           <Stack direction="row" gap={1} flexWrap="wrap">
             {isPosMode ? <Button color="inherit" onClick={() => navigate(PATH_DASHBOARD.pos.root)} startIcon={<ArrowBackRoundedIcon />} variant="outlined">Back to POS</Button> : null}
-            <Button onClick={() => setOpen(true)} startIcon={<AddRoundedIcon />} variant="contained">Create Repair Job</Button>
+            {canCreateRepairPermission ? <Button onClick={() => setOpen(true)} startIcon={<AddRoundedIcon />} variant="contained">Create Repair Job</Button> : null}
           </Stack>
         </Stack>
         <Card sx={{ overflow: "hidden" }}>
@@ -304,7 +407,7 @@ export default function RepairJobs() {
       </DialogContent>
       <DialogActions>
         <Button color="inherit" disabled={saving || isIntakeUploading} onClick={closeCreateDialog}>Cancel</Button>
-        <Button disabled={saving || isIntakeUploading || !canCreateRepair} onClick={() => void submit()} startIcon={<LocalPrintshopRoundedIcon />} variant="contained">Create & print receipt</Button>
+        <Button disabled={saving || isIntakeUploading || !canCreateRepair || !canCreateRepairPermission} onClick={() => void submit()} startIcon={<LocalPrintshopRoundedIcon />} variant="contained">Create & print receipt</Button>
       </DialogActions>
     </Dialog>
 
@@ -323,9 +426,33 @@ export default function RepairJobs() {
             <Typography fontWeight={900}>Problem</Typography>
             <Typography whiteSpace="pre-wrap">{detail.problemDescription}</Typography>
           </Card>
+          <Card sx={{ border: 1, borderColor: detail.paymentStatus === "paid" ? "success.main" : "divider", p: 2 }}>
+            <Stack alignItems={{ xs: "flex-start", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1.5} mb={2}>
+              <Box>
+                <Stack alignItems="center" direction="row" gap={1}>
+                  <PaymentsRoundedIcon color="primary" fontSize="small" />
+                  <Typography fontWeight={900}>Repair billing</Typography>
+                  <Chip color={paymentStatusColor(detail.paymentStatus)} label={paymentStatusLabel(detail.paymentStatus)} size="small" />
+                </Stack>
+                <Typography color="text.secondary" variant="body2">Set the final charge, collect payment through the active POS drawer, then deliver the device after settlement.</Typography>
+              </Box>
+              {detail.status === "completed" && detail.balance > 0 && canCollectPayment ? <Button disabled={saving || Number(detail.finalCost) <= 0} onClick={openPaymentCollection} startIcon={<PaymentsRoundedIcon />} variant="contained">Collect payment</Button> : null}
+            </Stack>
+            <Box sx={{ alignItems: "start", display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(220px, 1.2fr) repeat(2, minmax(140px, .7fr))" } }}>
+              <Stack direction="row" gap={1}>
+                <TextField disabled={saving || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} fullWidth helperText="Set before collecting payment." inputProps={{ inputMode: "decimal" }} label="Final repair charge" onChange={(event) => setChargeInput(event.target.value)} value={chargeInput} />
+                {canUpdateRepair && detail.status !== "cancelled" && detail.status !== "delivered" ? <Button disabled={saving} onClick={() => void saveFinalCharge()} startIcon={<PriceCheckRoundedIcon />} sx={{ alignSelf: "flex-start", minWidth: 92 }} variant="outlined">Save</Button> : null}
+              </Stack>
+              <Card sx={{ bgcolor: "action.hover", p: 1.5 }} variant="outlined"><Typography color="text.secondary" variant="caption">Total paid</Typography><Typography fontWeight={900} variant="h6">{fCurrency(detail.totalPaid)}</Typography></Card>
+              <Card sx={{ bgcolor: detail.balance === 0 ? "success.lighter" : "action.hover", p: 1.5 }} variant="outlined"><Typography color="text.secondary" variant="caption">Balance due</Typography><Typography color={detail.balance === 0 ? "success.main" : "text.primary"} fontWeight={900} variant="h6">{fCurrency(detail.balance)}</Typography></Card>
+            </Box>
+            {detail.status !== "completed" && detail.status !== "delivered" ? <Typography color="text.secondary" display="block" mt={1.5} variant="caption">Payments can be collected only after the repair is marked completed.</Typography> : null}
+            {detail.status === "completed" && detail.balance === 0 ? <Typography color="success.main" display="block" mt={1.5} variant="body2">Payment is settled. You can now mark the device as delivered.</Typography> : null}
+            {detail.payments.length ? <><Divider sx={{ my: 2 }} /><Typography fontWeight={800} mb={1}>Payment history</Typography><Box sx={{ overflowX: "auto" }}><Table size="small" sx={{ minWidth: 690 }}><TableHead><TableRow><TableCell>Received</TableCell><TableCell>Method</TableCell><TableCell>Reference</TableCell><TableCell>Cashier</TableCell><TableCell align="right">Amount</TableCell><TableCell align="right">Receipt</TableCell></TableRow></TableHead><TableBody>{detail.payments.map((payment) => <TableRow key={payment.id}><TableCell>{dateTime(payment.timestamp)}</TableCell><TableCell>{paymentMethodLabel(payment.method)}</TableCell><TableCell>{payment.referenceNo || "—"}</TableCell><TableCell>{payment.receivedByName}</TableCell><TableCell align="right">{fCurrency(Number(payment.amount))}</TableCell><TableCell align="right"><Button onClick={() => reprintRepairPaymentReceipt(payment)} size="small" startIcon={<LocalPrintshopRoundedIcon />}>Print</Button></TableCell></TableRow>)}</TableBody></Table></Box></> : null}
+          </Card>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <TextField disabled={saving || isInspectionUploading} label="Next status" onChange={(event) => changeStatus(event.target.value as RepairStatus)} select value={newStatus}>
-              {nextStatuses.map((option) => <MenuItem key={option} value={option}>{statusLabel(option)}</MenuItem>)}
+            <TextField disabled={saving || isInspectionUploading || !canUpdateRepair} label="Next status" onChange={(event) => changeStatus(event.target.value as RepairStatus)} select value={newStatus}>
+              {nextStatuses.map((option) => <MenuItem disabled={option === "delivered" && (detail.status !== "completed" || detail.balance > 0)} key={option} value={option}>{statusLabel(option)}</MenuItem>)}
             </TextField>
             <Button disabled={saving} onClick={() => printRepairJobReceipt(detail)} startIcon={<LocalPrintshopRoundedIcon />} variant="outlined">Reprint receipt</Button>
           </Box>
@@ -346,7 +473,36 @@ export default function RepairJobs() {
       </DialogContent>
       <DialogActions>
         <Button color="inherit" disabled={saving || isInspectionUploading} onClick={closeDetailDialog}>Close</Button>
-        <Button disabled={saving || isInspectionUploading || !detail || newStatus === detail.status} onClick={() => void saveStatus()} variant="contained">Update Status</Button>
+        <Button disabled={saving || isInspectionUploading || !canUpdateRepair || !detail || newStatus === detail.status} onClick={() => void saveStatus()} variant="contained">Update Status</Button>
+      </DialogActions>
+    </Dialog>
+
+    <Dialog fullWidth maxWidth="xs" onClose={() => !saving && setPaymentDialog(false)} open={paymentDialog}>
+      <DialogTitle component="div">
+        <Stack alignItems="center" direction="row" gap={1}>
+          <PaymentsRoundedIcon color="primary" />
+          <Typography variant="h6">Collect Repair Payment</Typography>
+        </Stack>
+        <Typography color="text.secondary" variant="body2">{detail?.jobNo} • {detail?.deviceName}</Typography>
+      </DialogTitle>
+      <DialogContent dividers>
+        {detail ? <Stack spacing={2}>
+          <Box sx={{ bgcolor: "action.hover", borderRadius: 2, display: "grid", gap: 1, gridTemplateColumns: "1fr 1fr", p: 1.5 }}>
+            <Box><Typography color="text.secondary" variant="caption">Final charge</Typography><Typography fontWeight={900}>{fCurrency(Number(detail.finalCost))}</Typography></Box>
+            <Box><Typography color="text.secondary" variant="caption">Already paid</Typography><Typography fontWeight={900}>{fCurrency(detail.totalPaid)}</Typography></Box>
+            <Box sx={{ gridColumn: "1 / -1" }}><Typography color="text.secondary" variant="caption">Balance due</Typography><Typography color="primary.main" fontWeight={900} variant="h6">{fCurrency(detail.balance)}</Typography></Box>
+          </Box>
+          <TextField autoFocus helperText={`Maximum ${fCurrency(detail.balance)}`} inputProps={{ inputMode: "decimal" }} label="Amount received" onChange={(event) => setPaymentForm((current) => ({ ...current, amount: event.target.value }))} value={paymentForm.amount} />
+          <TextField label="Payment method" onChange={(event) => setPaymentForm((current) => ({ ...current, method: event.target.value as RepairPaymentMethod }))} select value={paymentForm.method}>
+            {paymentMethods.map((method) => <MenuItem key={method.value} value={method.value}>{method.label}</MenuItem>)}
+          </TextField>
+          {paymentForm.method !== "cash" ? <TextField inputProps={{ maxLength: 255 }} label="Reference number *" onChange={(event) => setPaymentForm((current) => ({ ...current, referenceNo: event.target.value }))} placeholder="Transaction / approval reference" required value={paymentForm.referenceNo} /> : null}
+          <Typography color="text.secondary" variant="caption">This payment is linked to your current POS drawer. A payment receipt will print after it is saved.</Typography>
+        </Stack> : null}
+      </DialogContent>
+      <DialogActions>
+        <Button color="inherit" disabled={saving} onClick={() => setPaymentDialog(false)}>Cancel</Button>
+        <Button disabled={saving || !paymentForm.amount.trim() || (paymentForm.method !== "cash" && !paymentForm.referenceNo.trim())} onClick={() => void submitRepairPayment()} startIcon={<PaymentsRoundedIcon />} variant="contained">Collect & print</Button>
       </DialogActions>
     </Dialog>
   </>;
