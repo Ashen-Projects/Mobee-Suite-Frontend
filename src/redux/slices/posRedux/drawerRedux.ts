@@ -7,6 +7,7 @@ export type PosDrawer = {
   countedBankTransferTotal: string | null;
   countedCardTotal: string | null;
   countedCash: string | null;
+  countedMobileTotal: string | null;
   id: number;
   locationId: number;
   locationName: string;
@@ -23,10 +24,20 @@ export type CloseDrawerResult = {
   drawerId: number;
   summary: {
     bankTransferSales: number;
+    bankTransferRepairPayments: number;
     cardSales: number;
+    cardRepairPayments: number;
     cashSales: number;
+    cashRepairPayments: number;
     discountAmount: number;
+    expectedBankTransferTotal: number;
+    expectedCardTotal: number;
     expectedCash: number;
+    expectedMobileTotal: number;
+    mobileSales: number;
+    mobileRepairPayments: number;
+    repairPaymentCount: number;
+    repairPaymentTotal: number;
     salesCount: number;
     totalAmount: number;
   };
@@ -43,5 +54,6 @@ export const closeDrawer = async (input: {
   countedBankTransferTotal: number;
   countedCardTotal: number;
   countedCash: number;
+  countedMobileTotal: number;
   note?: string;
 }) => (await post<CloseDrawerResult, typeof input>("pos-drawers/close", input, undefined, false)).data;
