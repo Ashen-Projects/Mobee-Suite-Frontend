@@ -30,6 +30,7 @@ export type SaleCustomer = {
 export type SaleInput = {
   customer?: { id?: number; name?: string; phone?: string };
   discountAmount: number;
+  priceOverrideReason?: string;
   items: Array<{
     discountAmount: number;
     productId: number;
@@ -59,10 +60,13 @@ export type SaleDetail = {
     stockUnits: Array<{ barcode: string | null; stockId: number | null }>;
     totalAmount: string;
     unitPrice: string;
+    warrantyPeriodMonths: number;
+    warrantyType: string | null;
   }>;
   locationId: number;
   locationName: string;
   paidAmount: string;
+  priceOverrideReason: string | null;
   payments: Array<{ amount: string; id: number; method: PaymentMethod; referenceNo: string | null; timestamp: number }>;
   status: "draft" | "completed" | "cancelled" | "returned";
   subTotal: string;
@@ -72,7 +76,7 @@ export type SaleDetail = {
   userName: string;
 };
 
-export type SaleListItem = Omit<SaleDetail, "items" | "payments" | "customerPhone" | "locationId" | "subTotal" | "userId">;
+export type SaleListItem = Omit<SaleDetail, "items" | "payments" | "customerPhone" | "locationId" | "priceOverrideReason" | "subTotal" | "userId">;
 export type SaleListResponse = {
   items: SaleListItem[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };

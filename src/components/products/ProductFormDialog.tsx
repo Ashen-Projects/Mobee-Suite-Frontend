@@ -3,6 +3,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import DoNotDisturbOnOutlinedIcon from "@mui/icons-material/DoNotDisturbOnOutlined";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PrintRoundedIcon from "@mui/icons-material/PrintRounded";
 import SaveRoundedIcon from "@mui/icons-material/SaveRounded";
 import { Box, Button, Card, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, IconButton, MenuItem, Stack, SwipeableDrawer, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
@@ -21,6 +22,7 @@ type Props = {
   initialParentId?: number | null;
   onClose: () => void;
   onCreateVariation?: (parentId: number) => void;
+  onEditVariation?: (variationId: number) => void;
   onSaved: () => Promise<void>;
   open: boolean;
   parents: ProductListItem[];
@@ -39,7 +41,7 @@ const WARRANTY_TYPES: Array<{ label: string; value: ProductWarrantyType }> = [
   { label: "Extended warranty", value: "extended" },
 ];
 
-export default function ProductFormDialog({ attributes, categories, initialParentId = null, onClose, onCreateVariation, onSaved, open, parents, product, stockLevelLocations }: Props) {
+export default function ProductFormDialog({ attributes, categories, initialParentId = null, onClose, onCreateVariation, onEditVariation, onSaved, open, parents, product, stockLevelLocations }: Props) {
   const [tab, setTab] = useState(0);
   const [kind, setKind] = useState<ProductKind>("simple");
   const [name, setName] = useState("");
@@ -122,7 +124,7 @@ export default function ProductFormDialog({ attributes, categories, initialParen
     const attributeIds = new Set((product?.variations ?? []).flatMap(({ options }) => options.map(({ attributeId }) => attributeId)));
     return activeAttributes.filter(({ id }) => attributeIds.has(id));
   }, [activeAttributes, product?.variations]);
-  const variationGridColumns = useMemo(() => `minmax(220px, 1.4fr) repeat(2, minmax(170px, 1fr)) minmax(180px, 1.05fr) ${variationAttributes.map(() => "minmax(170px, .95fr)").join(" ")} 72px`, [variationAttributes]);
+  const variationGridColumns = useMemo(() => `minmax(220px, 1.4fr) repeat(2, minmax(170px, 1fr)) minmax(180px, 1.05fr) ${variationAttributes.map(() => "minmax(170px, .95fr)").join(" ")} 96px`, [variationAttributes]);
 
   const setPrimaryImage = (index: number) => setImages((current) => current.map((image, imageIndex) => ({ ...image, isPrimary: imageIndex === index })));
   const updateImage = (index: number, values: Partial<ProductImageInput>) => setImages((current) => current.map((image, imageIndex) => imageIndex === index ? { ...image, ...values } : image));
@@ -399,14 +401,17 @@ export default function ProductFormDialog({ attributes, categories, initialParen
       {tab === 0 ? <Card sx={{ ...panelSx, p: { xs: 1.5, md: 2 } }}><Stack spacing={2}>
         <Stack alignItems={{ xs: "stretch", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1.5}><Box><Typography fontWeight={700} variant="h6">Variation Prices</Typography><Typography color="text.secondary" variant="body2">Manage child product prices and discontinued rows.</Typography></Box>{product ? <Button onClick={() => onCreateVariation?.(product.id)} startIcon={<AddRoundedIcon />} variant="outlined">Add Variation</Button> : null}</Stack>
         {product?.variations?.length ? <Box sx={{ overflowX: "auto" }}><Box sx={{ minWidth: Math.max(1180, 970 + variationAttributes.length * 190) }}>
-          <Box sx={{ bgcolor: "action.hover", display: "grid", gap: 2, gridTemplateColumns: variationGridColumns, px: 2, py: 1.5 }}>{["Name", "MRP Price", "Lowest Selling Price", "Product Code", ...variationAttributes.map(({ displayName }) => displayName), "Status"].map((heading) => <Typography color="text.secondary" fontWeight={700} key={heading} variant="body2">{heading}</Typography>)}</Box>
+          <Box sx={{ bgcolor: "action.hover", display: "grid", gap: 2, gridTemplateColumns: variationGridColumns, px: 2, py: 1.5 }}>{["Name", "MRP Price", "Lowest Selling Price", "Product Code", ...variationAttributes.map(({ displayName }) => displayName), "Actions"].map((heading) => <Typography color="text.secondary" fontWeight={700} key={heading} variant="body2">{heading}</Typography>)}</Box>
           {product.variations.map((variation) => { const draft = variationDrafts[variation.id]; return <Box key={variation.id} sx={{ alignItems: "center", borderBottom: 1, borderColor: "divider", display: "grid", gap: 2, gridTemplateColumns: variationGridColumns, minHeight: 80, px: 2, py: 1.25, "& .MuiInputBase-root": { height: 42 } }}>
             <Box minWidth={0}><Typography fontWeight={700} noWrap>{variation.name}</Typography><Stack direction="row" flexWrap="wrap" gap={0.5} mt={0.5}>{variation.options.map((option) => <Chip color="primary" key={option.optionId} label={option.label} size="small" variant="outlined" />)}</Stack></Box>
             <TextField disabled helperText="Set at Add to Stock" onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], mrpPrice: event.target.value } }))} size="small" type="text" value={draft?.mrpPrice ?? variation.mrpPrice} />
             <TextField disabled helperText="Set at Add to Stock" onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], lowestSellingPrice: event.target.value } }))} size="small" type="text" value={draft?.lowestSellingPrice ?? variation.lowestSellingPrice} />
             <TextField onChange={(event) => setVariationDrafts((current) => ({ ...current, [variation.id]: { ...current[variation.id], sku: event.target.value.toUpperCase() } }))} size="small" value={draft?.sku ?? variation.sku ?? ""} />
             {variationAttributes.map((attribute) => { const selectedOption = variation.options.find(({ attributeId }) => attributeId === attribute.id); const selectedId = draft?.optionIds.find((optionId) => attribute.options.some(({ id }) => id === optionId)) ?? selectedOption?.optionId ?? ""; return <TextField key={attribute.id} onChange={(event) => { const nextId = Number(event.target.value); setVariationDrafts((current) => { const currentDraft = current[variation.id]; const otherIds = currentDraft.optionIds.filter((optionId) => !attribute.options.some(({ id }) => id === optionId)); return { ...current, [variation.id]: { ...currentDraft, optionIds: [...otherIds, nextId] } }; }); }} select size="small" value={selectedId}><MenuItem value="">Select</MenuItem>{attribute.options.filter(({ isActive }) => isActive).map((option) => <MenuItem key={option.id} value={option.id}>{attribute.preUnit ?? ""}{option.label}{attribute.postUnit ?? ""}</MenuItem>)}</TextField>; })}
-            <IconButton aria-label={variation.isActive ? "Deactivate variation" : "Activate variation"} color={variation.isActive ? "error" : "success"} onClick={async () => { try { await updateProductStatus(variation.id, !variation.isActive); await onSaved(); toast.success(`Variation ${variation.isActive ? "deactivated" : "activated"}.`); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update variation status."); } }}><DoNotDisturbOnOutlinedIcon /></IconButton>
+            <Stack direction="row" spacing={0.25}>
+              <IconButton aria-label={`Edit ${variation.name}`} color="primary" onClick={() => onEditVariation?.(variation.id)} title="Edit variation" type="button"><EditOutlinedIcon fontSize="small" /></IconButton>
+              <IconButton aria-label={variation.isActive ? "Deactivate variation" : "Activate variation"} color={variation.isActive ? "error" : "success"} onClick={async () => { try { await updateProductStatus(variation.id, !variation.isActive); await onSaved(); toast.success(`Variation ${variation.isActive ? "deactivated" : "activated"}.`); } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to update variation status."); } }} type="button"><DoNotDisturbOnOutlinedIcon /></IconButton>
+            </Stack>
           </Box>; })}
         </Box></Box> : <Box sx={{ border: 1, borderColor: "divider", borderRadius: 2, borderStyle: "dashed", p: 5, textAlign: "center" }}><Typography fontWeight={700}>No variations yet</Typography><Typography color="text.secondary" variant="body2">Create the parent product first, then add each sellable variation.</Typography></Box>}
       </Stack></Card> : null}
