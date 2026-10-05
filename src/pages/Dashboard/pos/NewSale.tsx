@@ -15,6 +15,7 @@ import useAuth from "../../../hooks/useAuth";
 import { getCurrentDrawer, type PosDrawer } from "../../../redux/slices/posRedux/drawerRedux";
 import { createSale, searchSaleCustomers, searchSaleProducts, type PaymentMethod, type SaleCustomer, type SaleDetail, type SaleProductSearchItem } from "../../../redux/slices/posRedux/saleRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
+import { USER_ROLES } from "../../../utils/constants";
 import { fCurrency } from "../../../utils/formatNumber";
 import { printSaleReceipt } from "../../../utils/printSaleReceipt";
 
@@ -52,7 +53,8 @@ const uniqueStockIds = (values: number[]) => Array.from(new Set(values));
 
 export default function NewSale() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { hasRole, user } = useAuth();
+  const isAdministrator = hasRole(USER_ROLES.ADMIN);
   const locationId = user?.defaultLocationId ?? null;
   const productInputRef = useRef<HTMLInputElement | null>(null);
   const productSearchRequestRef = useRef(0);
@@ -71,6 +73,7 @@ export default function NewSale() {
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [items, setItems] = useState<CartItem[]>([]);
   const [saleDiscount, setSaleDiscount] = useState(0);
+  const [priceOverrideReason, setPriceOverrideReason] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [referenceNo, setReferenceNo] = useState("");
   const [lastSale, setLastSale] = useState<SaleDetail | null>(null);
@@ -109,8 +112,17 @@ export default function NewSale() {
   const subTotal = useMemo(() => items.reduce((total, item) => total + item.unitPrice * item.quantity, 0), [items]);
   const itemDiscount = useMemo(() => items.reduce((total, item) => total + item.discountAmount, 0), [items]);
   const minimumSaleTotal = useMemo(() => items.reduce((sum, item) => sum + item.lowestSellingPrice * item.quantity, 0), [items]);
-  const maxSaleDiscount = Math.max(0, subTotal - itemDiscount - minimumSaleTotal);
+  const maxSaleDiscount = isAdministrator
+    ? Math.max(0, subTotal - itemDiscount)
+    : Math.max(0, subTotal - itemDiscount - minimumSaleTotal);
   const total = Math.max(0, subTotal - itemDiscount - saleDiscount);
+  const needsPriceOverride = useMemo(() => (
+    items.some((item) => (
+      item.unitPrice > item.mrpPrice
+      || item.unitPrice * item.quantity - item.discountAmount < item.lowestSellingPrice * item.quantity
+    ))
+    || total < minimumSaleTotal
+  ), [items, minimumSaleTotal, total]);
 
   const addProduct = (product: SaleProductSearchItem | null) => {
     if (!product) return;
@@ -179,12 +191,20 @@ export default function NewSale() {
     if (!locationId) { toast.error("Your account does not have an assigned sale location."); return; }
     if (!drawer) { toast.error("Open your POS drawer before creating a sale."); return; }
     if (!items.length) { toast.error("Add at least one product."); return; }
-    if (items.some((item) => item.unitPrice * item.quantity - item.discountAmount < item.lowestSellingPrice * item.quantity)) {
+    if (!isAdministrator && items.some((item) => item.unitPrice * item.quantity - item.discountAmount < item.lowestSellingPrice * item.quantity)) {
       toast.error("Discount cannot reduce a product below its lowest selling price.");
       return;
     }
-    if (total < items.reduce((sum, item) => sum + item.lowestSellingPrice * item.quantity, 0)) {
+    if (!isAdministrator && total < items.reduce((sum, item) => sum + item.lowestSellingPrice * item.quantity, 0)) {
       toast.error("Sale discount cannot reduce invoice below lowest selling price.");
+      return;
+    }
+    if (needsPriceOverride && !isAdministrator) {
+      toast.error("Only an administrator can sell above MRP or below the lowest selling price.");
+      return;
+    }
+    if (needsPriceOverride && !priceOverrideReason.trim()) {
+      toast.error("Enter an override reason for this administrator price exception.");
       return;
     }
     setSaving(true);
@@ -200,6 +220,7 @@ export default function NewSale() {
       const sale = await createSale({
         customer: selectedCustomer ? { id: selectedCustomer.id } : draftCustomer ?? undefined,
         discountAmount: saleDiscount,
+        priceOverrideReason: needsPriceOverride ? priceOverrideReason.trim() : undefined,
         items: items.map((item) => ({
           discountAmount: item.discountAmount,
           productId: item.productId,
@@ -213,6 +234,7 @@ export default function NewSale() {
       setLastSale(sale);
       setItems([]);
       setSaleDiscount(0);
+      setPriceOverrideReason("");
       setSelectedCustomer(null);
       setCustomerSearch("");
       setNewCustomerName("");
@@ -248,7 +270,7 @@ export default function NewSale() {
     };
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
-  }, [items, navigate, saving, total, saleDiscount, paymentMethod, referenceNo, selectedCustomer, newCustomerDraft, drawer, locationId]);
+  }, [items, navigate, saving, total, saleDiscount, paymentMethod, priceOverrideReason, referenceNo, selectedCustomer, newCustomerDraft, drawer, locationId, needsPriceOverride, isAdministrator]);
 
   const canAddCustomer = Boolean(customerSearch.trim()) && !selectedCustomer && !newCustomerDraft && customerOptions.length === 0;
 
@@ -352,7 +374,7 @@ export default function NewSale() {
               px: 2,
               py: 1.4,
             }}>
-              {["Product", "Qty", "Cost", "MRP", "Discount", "Line Total", ""].map((heading) => <Typography color="text.secondary" fontWeight={800} key={heading} variant="caption">{heading}</Typography>)}
+              {["Product", "Qty", "Cost", "Unit price", "Discount", "Line Total", ""].map((heading) => <Typography color="text.secondary" fontWeight={800} key={heading} variant="caption">{heading}</Typography>)}
             </Box>
             {!items.length ? <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 340 }}>
               <SearchRoundedIcon color="disabled" sx={{ fontSize: 48, mb: 1 }} />
@@ -361,7 +383,12 @@ export default function NewSale() {
             </Stack> : <Stack divider={<Divider flexItem />}>
               {items.map((item) => {
                 const nextQty = (value: string) => Math.min(item.availableStockIds.length, Math.max(1, Math.trunc(toAmount(value))));
-                const nextPrice = (value: string) => Math.min(item.mrpPrice, toAmount(value));
+                const nextPrice = (value: string) => {
+                  const entered = toAmount(value);
+                  return isAdministrator
+                    ? entered
+                    : Math.min(item.mrpPrice, Math.max(item.lowestSellingPrice, entered));
+                };
                 return <Box key={item.id} sx={{
                   alignItems: "center",
                   display: "grid",
@@ -386,7 +413,12 @@ export default function NewSale() {
                       const selectedStockIds = quantity <= row.stockIds.length
                         ? row.stockIds.slice(0, quantity)
                         : [...row.stockIds, ...row.availableStockIds.filter((stockId) => !row.stockIds.includes(stockId)).slice(0, quantity - row.stockIds.length)];
-                      return { ...row, discountAmount: Math.min(row.discountAmount, maxLineDiscount({ ...row, quantity })), quantity, stockIds: selectedStockIds };
+                      return {
+                        ...row,
+                        discountAmount: isAdministrator ? row.discountAmount : Math.min(row.discountAmount, maxLineDiscount({ ...row, quantity })),
+                        quantity,
+                        stockIds: selectedStockIds,
+                      };
                     }))}
                     size="small"
                     value={String(item.quantity)}
@@ -394,13 +426,20 @@ export default function NewSale() {
                   <Typography color="text.secondary" fontWeight={700}>{fCurrency(item.costPrice)}</Typography>
                   <TextField
                     inputProps={{ inputMode: "decimal", style: { textAlign: "right" } }}
-                    onChange={(event) => setItems((current) => current.map((row) => row.id === item.id ? { ...row, discountAmount: Math.min(row.discountAmount, maxLineDiscount({ ...row, unitPrice: nextPrice(event.target.value) })), unitPrice: nextPrice(event.target.value) } : row))}
+                    onChange={(event) => setItems((current) => current.map((row) => row.id === item.id ? {
+                      ...row,
+                      discountAmount: isAdministrator ? row.discountAmount : Math.min(row.discountAmount, maxLineDiscount({ ...row, unitPrice: nextPrice(event.target.value) })),
+                      unitPrice: nextPrice(event.target.value),
+                    } : row))}
                     size="small"
                     value={String(item.unitPrice)}
                   />
                   <TextField
                     inputProps={{ inputMode: "decimal", style: { textAlign: "right" } }}
-                    onChange={(event) => setItems((current) => current.map((row) => row.id === item.id ? { ...row, discountAmount: Math.min(maxLineDiscount(row), toAmount(event.target.value)) } : row))}
+                    onChange={(event) => setItems((current) => current.map((row) => row.id === item.id ? {
+                      ...row,
+                      discountAmount: isAdministrator ? toAmount(event.target.value) : Math.min(maxLineDiscount(row), toAmount(event.target.value)),
+                    } : row))}
                     size="small"
                     value={String(item.discountAmount)}
                   />
@@ -512,7 +551,21 @@ export default function NewSale() {
             <Stack spacing={1.5}>
               <TextField label="Payment method" onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} select SelectProps={{ native: true }} value={paymentMethod}>{methods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</TextField>
               <TextField label="Reference No" onChange={(event) => setReferenceNo(event.target.value)} value={referenceNo} />
-              <TextField helperText={`Max allowed ${fCurrency(maxSaleDiscount)}`} inputProps={{ inputMode: "decimal" }} label="Sale discount" onChange={(event) => setSaleDiscount(Math.min(maxSaleDiscount, toAmount(event.target.value)))} value={String(saleDiscount)} />
+              <TextField helperText={!isAdministrator ? `Max allowed ${fCurrency(maxSaleDiscount)}` : undefined} inputProps={{ inputMode: "decimal" }} label="Sale discount" onChange={(event) => setSaleDiscount(Math.min(maxSaleDiscount, toAmount(event.target.value)))} value={String(saleDiscount)} />
+              {isAdministrator && needsPriceOverride ? <Box sx={{ bgcolor: "error.lighter", border: 1, borderColor: "error.main", borderRadius: 2, p: 1.25 }}>
+                <Typography color="error.main" fontWeight={800} variant="body2">Administrator approval required</Typography>
+                <Typography color="text.secondary" display="block" mb={1} variant="caption">This sale is below the floor price or above MRP. Add a reason to continue; it will be saved in the audit trail.</Typography>
+                <TextField
+                  fullWidth
+                  helperText="Required for this exception. It will be retained with the sale record."
+                  inputProps={{ maxLength: 500 }}
+                  label="Override reason"
+                  onChange={(event) => setPriceOverrideReason(event.target.value)}
+                  required
+                  size="small"
+                  value={priceOverrideReason}
+                />
+              </Box> : null}
               <Button disabled variant="outlined">Claim voucher — coming soon</Button>
               <Divider />
               <Stack spacing={0.75}><Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Subtotal</Typography><Typography>{fCurrency(subTotal)}</Typography></Stack><Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Discount</Typography><Typography>{fCurrency(itemDiscount + saleDiscount)}</Typography></Stack><Stack direction="row" justifyContent="space-between"><Typography variant="h5">Total</Typography><Typography variant="h5">{fCurrency(total)}</Typography></Stack></Stack>

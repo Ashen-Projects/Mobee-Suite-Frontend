@@ -94,6 +94,13 @@ export default function ProductList() {
     try { setVariationPreview(await getProduct(row.id)); }
     catch (error) { setVariationAnchor(null); toast.error(error instanceof Error ? error.message : "Unable to load variations."); }
   };
+  const openVariationEdit = async (variationId: number) => {
+    try {
+      setEditingProduct(await getProduct(variationId));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load variation details.");
+    }
+  };
   const confirmStatus = async () => {
     if (!statusTarget) return;
     try {
@@ -137,7 +144,7 @@ export default function ProductList() {
       </Card>
     </Stack>
 
-    <ProductFormDialog attributes={attributes} categories={categories} initialParentId={createParentId} onClose={() => { setFormOpen(false); setCreateParentId(null); }} onCreateVariation={(parentProductId) => { setFormOpen(false); setEditingProduct(null); setCreateParentId(parentProductId); window.setTimeout(() => setFormOpen(true), 0); }} onSaved={async () => { await Promise.all([loadProducts(), loadReferenceData()]); }} open={formOpen} parents={parents} product={editingProduct} stockLevelLocations={stockLevelLocations} />
+    <ProductFormDialog attributes={attributes} categories={categories} initialParentId={createParentId} onClose={() => { setFormOpen(false); setCreateParentId(null); }} onCreateVariation={(parentProductId) => { setFormOpen(false); setEditingProduct(null); setCreateParentId(parentProductId); window.setTimeout(() => setFormOpen(true), 0); }} onEditVariation={(variationId) => void openVariationEdit(variationId)} onSaved={async () => { await Promise.all([loadProducts(), loadReferenceData()]); }} open={formOpen} parents={parents} product={editingProduct} stockLevelLocations={stockLevelLocations} />
 
     <Popover anchorEl={variationAnchor} anchorOrigin={{ horizontal: "left", vertical: "bottom" }} onClose={() => { setVariationAnchor(null); setVariationPreview(null); }} open={Boolean(variationAnchor)} transformOrigin={{ horizontal: "left", vertical: "top" }} slotProps={{ paper: { sx: { borderRadius: 1.5, mt: 0.75, overflow: "hidden", width: { xs: 350, sm: 620 } } } }}>
       <Stack><Stack alignItems="center" direction="row" justifyContent="space-between" px={1.75} py={1.5}><Box><Typography fontSize={14} fontWeight={700}>Variations &amp; Pricing</Typography><Typography color="text.secondary" fontSize={11.5}>{variationPreview?.variations.filter(({ isActive }) => isActive).length ?? 0} active {variationPreview?.variations.filter(({ isActive }) => isActive).length === 1 ? "variation" : "variations"}</Typography></Box><Stack direction="row" gap={0.5}><Chip color="primary" label={`${variationPreview?.variations.length ?? 0} Total`} size="small" variant="outlined" /><Chip label="Per-item stock" size="small" variant="outlined" /></Stack></Stack>

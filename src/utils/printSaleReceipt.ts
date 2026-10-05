@@ -12,6 +12,13 @@ const SOFTWARE_DEVELOPER = "Software Developed By<br/>Thushan Damjith<br/>+94762
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+const warrantyLabel = (periodMonths: number, warrantyType: string | null) => {
+  if (!periodMonths || !warrantyType) return null;
+  const duration = periodMonths === 12 ? "1 year" : `${periodMonths} months`;
+  const type = warrantyType.replace(/(^|_)([a-z])/g, (_match, prefix: string, letter: string) => `${prefix} ${letter.toUpperCase()}`).trim();
+  return `${duration} • ${type} warranty`;
+};
+
 const barcodeSvg = (value: string) => {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   JsBarcode(svg, value, {
@@ -34,16 +41,21 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   const payment = sale.payments[0];
   const change = Math.max(0, Number(sale.paidAmount) - Number(sale.totalAmount));
   const invoiceBarcode = barcodeSvg(sale.invoiceNo);
-  const itemRows = sale.items.map((item) => `
+  const itemRows = sale.items.map((item) => {
+    const warranty = warrantyLabel(item.warrantyPeriodMonths, item.warrantyType);
+    return `
     <div class="item">
       <div class="item-details">
         <div class="item-name">${escapeHtml(item.productName)}</div>
         <div class="item-code">${escapeHtml(item.productSku ?? `Product #${item.productId}`)}</div>
+        ${warranty ? `<div class="item-warranty">Warranty: ${escapeHtml(warranty)}</div>` : ""}
       </div>
       <div class="item-quantity">${item.quantity}</div>
       <strong class="item-price">${fCurrency(Number(item.totalAmount))}</strong>
     </div>
-  `).join("");
+  `;
+  }).join("");
+  const hasWarranty = sale.items.some((item) => Boolean(warrantyLabel(item.warrantyPeriodMonths, item.warrantyType)));
   const win = window.open("", "_blank", "width=420,height=720");
   if (!win) return;
   win.document.write(`<!doctype html>
@@ -90,6 +102,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
       .item:first-of-type { border-top: 0; }
       .item-name { font-size: 10.5px; font-weight: 800; overflow-wrap: anywhere; }
       .item-code { color: #666; font-size: 9px; margin-top: .25mm; }
+      .item-warranty { color: #164b2c; font-size: 8.7px; font-weight: 700; margin-top: .35mm; overflow-wrap: anywhere; }
       .item-quantity, .item-price { padding-top: .15mm; text-align: right; white-space: nowrap; }
       .item-quantity { color: #444; }
       .summary { margin-left: auto; width: 45mm; }
@@ -147,6 +160,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
         <div class="row"><span>Balance</span><span>${fCurrency(change)}</span></div>
       </div>
       <div class="line"></div>
+      ${hasWarranty ? '<p class="center muted">Warranty starts from the invoice date. Keep this receipt for warranty claims.</p><div class="line"></div>' : ""}
       <div class="thanks">Thank you!</div>
       <p class="center muted">We appreciate your purchase.<br/>Visit us again!</p>
       <div class="barcode">${invoiceBarcode}</div>

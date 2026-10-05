@@ -483,7 +483,6 @@ export default function RepairJobs() {
                   <QrCodeScannerRoundedIcon color="primary" fontSize="small" />
                   <Typography fontWeight={900}>Parts used from stock</Typography>
                 </Stack>
-                <Typography color="text.secondary" variant="body2">Scan each spare-part barcode to reserve it. It is consumed when the repair is completed; released parts immediately return to available stock.</Typography>
               </Box>
               <Chip label={`${detail.parts.filter((part) => part.status === "reserved").length} reserved`} size="small" variant="outlined" />
             </Stack>
@@ -505,7 +504,7 @@ export default function RepairJobs() {
                 value={partBarcode}
               />
               <Button disabled={saving || !partBarcode.trim()} onClick={() => void reserveScannedPart()} startIcon={<QrCodeScannerRoundedIcon />} sx={{ minWidth: { sm: 164 } }} variant="outlined">Reserve part</Button>
-            </Stack> : <Typography color="text.secondary" variant="body2">{canManageRepairParts ? "Parts are locked because this repair is complete, delivered, or cancelled." : "You do not have permission to reserve or release repair parts."}</Typography>}
+            </Stack> : null}
             {detail.parts.length ? <Box sx={{ mt: 2, overflowX: "auto" }}>
               <Table size="small" sx={{ minWidth: 580 }}>
                 <TableHead><TableRow><TableCell>Part</TableCell><TableCell>Barcode</TableCell><TableCell>Status</TableCell><TableCell align="right">Action</TableCell></TableRow></TableHead>
@@ -517,7 +516,6 @@ export default function RepairJobs() {
                 </TableRow>)}</TableBody>
               </Table>
             </Box> : null}
-            <Typography color="text.secondary" display="block" mt={detail.parts.length ? 1.5 : 1} variant="caption">Parts are internal inventory records only. Customer receipts show one repair total and never itemize parts or service charges.</Typography>
           </Card>
           <Card sx={{ border: 1, borderColor: detail.paymentStatus === "paid" ? "success.main" : "divider", p: 2 }}>
             <Stack alignItems={{ xs: "flex-start", sm: "center" }} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={1.5} mb={2}>
@@ -527,20 +525,17 @@ export default function RepairJobs() {
                   <Typography fontWeight={900}>Customer repair total</Typography>
                   <Chip color={paymentStatusColor(detail.paymentStatus)} label={paymentStatusLabel(detail.paymentStatus)} size="small" />
                 </Stack>
-                <Typography color="text.secondary" variant="body2">Set one final amount for the customer, collect it through the active POS drawer, then deliver the device after settlement.</Typography>
               </Box>
               {detail.status === "completed" && detail.balance > 0 && canCollectPayment ? <Button disabled={saving || Number(detail.finalCost) <= 0} onClick={openPaymentCollection} startIcon={<PaymentsRoundedIcon />} variant="contained">Collect payment</Button> : null}
             </Stack>
             <Box sx={{ alignItems: "start", display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(220px, 1.2fr) repeat(2, minmax(140px, .7fr))" } }}>
               <Stack direction="row" gap={1}>
-                <TextField disabled={saving || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} fullWidth helperText="One total only; parts and labour are not itemized for customers." inputProps={{ inputMode: "decimal" }} label="Customer repair total" onChange={(event) => setChargeInput(event.target.value)} value={chargeInput} />
+                <TextField disabled={saving || !canUpdateRepair || detail.status === "cancelled" || detail.status === "delivered"} fullWidth inputProps={{ inputMode: "decimal" }} label="Customer repair total" onChange={(event) => setChargeInput(event.target.value)} value={chargeInput} />
                 {canUpdateRepair && detail.status !== "cancelled" && detail.status !== "delivered" ? <Button disabled={saving} onClick={() => void saveFinalCharge()} startIcon={<PriceCheckRoundedIcon />} sx={{ alignSelf: "flex-start", minWidth: 92 }} variant="outlined">Save</Button> : null}
               </Stack>
               <Card sx={{ bgcolor: "action.hover", p: 1.5 }} variant="outlined"><Typography color="text.secondary" variant="caption">Total paid</Typography><Typography fontWeight={900} variant="h6">{fCurrency(detail.totalPaid)}</Typography></Card>
               <Card sx={{ bgcolor: detail.balance === 0 ? "success.lighter" : "action.hover", p: 1.5 }} variant="outlined"><Typography color="text.secondary" variant="caption">Balance due</Typography><Typography color={detail.balance === 0 ? "success.main" : "text.primary"} fontWeight={900} variant="h6">{fCurrency(detail.balance)}</Typography></Card>
             </Box>
-            {detail.status !== "completed" && detail.status !== "delivered" ? <Typography color="text.secondary" display="block" mt={1.5} variant="caption">Payments can be collected only after the repair is marked completed.</Typography> : null}
-            {detail.status === "completed" && detail.balance === 0 ? <Typography color="success.main" display="block" mt={1.5} variant="body2">Payment is settled. You can now mark the device as delivered.</Typography> : null}
             {detail.payments.length ? <><Divider sx={{ my: 2 }} /><Typography fontWeight={800} mb={1}>Payment history</Typography><Box sx={{ overflowX: "auto" }}><Table size="small" sx={{ minWidth: 690 }}><TableHead><TableRow><TableCell>Received</TableCell><TableCell>Method</TableCell><TableCell>Reference</TableCell><TableCell>Cashier</TableCell><TableCell align="right">Amount</TableCell><TableCell align="right">Receipt</TableCell></TableRow></TableHead><TableBody>{detail.payments.map((payment) => <TableRow key={payment.id}><TableCell>{dateTime(payment.timestamp)}</TableCell><TableCell>{paymentMethodLabel(payment.method)}</TableCell><TableCell>{payment.referenceNo || "—"}</TableCell><TableCell>{payment.receivedByName}</TableCell><TableCell align="right">{fCurrency(Number(payment.amount))}</TableCell><TableCell align="right"><Button onClick={() => reprintRepairPaymentReceipt(payment)} size="small" startIcon={<LocalPrintshopRoundedIcon />}>Print</Button></TableCell></TableRow>)}</TableBody></Table></Box></> : null}
           </Card>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
