@@ -101,6 +101,13 @@ export default function PosLanding() {
       setOpenDialog(false);
       toast.success("POS drawer opened.");
     } catch (error) {
+      const activeDrawer = await getCurrentDrawer().catch(() => null);
+      if (activeDrawer) {
+        setDrawer(activeDrawer);
+        setOpenDialog(false);
+        toast.info("A POS drawer is already open at this location.");
+        return;
+      }
       toast.error(error instanceof Error ? error.message : "Unable to open POS drawer.");
     } finally {
       setSaving(false);
@@ -133,6 +140,7 @@ export default function PosLanding() {
       setCloseOpen(false);
       setCloseForm({ bank: "", card: "", cash: "", expense: "", mobile: "", note: "" });
       toast.success(`Drawer closed. Difference ${fCurrency(closed.difference)}.`);
+      if (can(USER_PERMISSIONS.SALES_VIEW)) navigate(`${PATH_DASHBOARD.pos.drawerCloseReports}?drawerId=${closed.drawerId}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to close POS drawer.");
     } finally {
@@ -182,17 +190,18 @@ export default function PosLanding() {
             <Stack alignItems={{ xs: "stretch", md: "center" }} direction={{ xs: "column", md: "row" }} justifyContent="space-between" gap={2}>
               <Box>
                 <Typography fontWeight={900} variant="h5">Drawer is open</Typography>
-                <Typography color="text.secondary" variant="body2">{drawer.userName} • {drawer.locationName} • Opened {dateTime(drawer.openedAt)}</Typography>
+                <Typography color="text.secondary" variant="body2">Opened by {drawer.userName} • {drawer.locationName} • {dateTime(drawer.openedAt)}</Typography>
               </Box>
               <Stack direction="row" gap={1} flexWrap="wrap">
                 <Chip icon={<LocalAtmRoundedIcon />} label={`Start cash ${fCurrency(Number(drawer.openingCash))}`} />
-                <Button color="error" onClick={() => setCloseOpen(true)} startIcon={<CloseRoundedIcon />} variant="outlined">Close Drawer</Button>
+                {drawer.canClose ? <Button color="error" onClick={() => setCloseOpen(true)} startIcon={<CloseRoundedIcon />} variant="outlined">Close Drawer</Button> : null}
               </Stack>
             </Stack>
           </Card>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" } }}>
             <ActionCard description="Scan item, choose customer, collect payment." icon={<PointOfSaleRoundedIcon />} label="Create Sale" to={`${PATH_DASHBOARD.pos.newSale}?mode=pos`} />
-            <ActionCard description="Review and re-print invoices." icon={<ReceiptLongRoundedIcon />} label="Sales List" to={`${PATH_DASHBOARD.pos.sales}?mode=pos`} />
+            {can(USER_PERMISSIONS.SALES_VIEW) ? <ActionCard description="Review and re-print invoices." icon={<ReceiptLongRoundedIcon />} label="Sales List" to={`${PATH_DASHBOARD.pos.sales}?mode=pos`} /> : null}
+            {can(USER_PERMISSIONS.SALES_VIEW) ? <ActionCard description="Review saved shift closings and cash reconciliation." icon={<LocalAtmRoundedIcon />} label="Drawer Close Reports" to={PATH_DASHBOARD.pos.drawerCloseReports} /> : null}
             {can(USER_PERMISSIONS.REPAIRS_CREATE) ? <ActionCard description="Receive customer devices and print job receipt." icon={<BuildRoundedIcon />} label="Create Repair Job" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&create=1`} /> : null}
             {can(USER_PERMISSIONS.REPAIRS_VIEW) && can(USER_PERMISSIONS.REPAIRS_COLLECT_PAYMENT) ? <ActionCard description="Collect payment for completed repair jobs." icon={<PaymentsRoundedIcon />} label="Repair Payments" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&status=completed`} /> : null}
             <ActionCard description="Future warranty workflow." disabled icon={<ShieldRoundedIcon />} label="Warranty Claim" />
