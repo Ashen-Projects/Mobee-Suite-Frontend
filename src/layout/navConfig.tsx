@@ -27,6 +27,7 @@ export const navItems: NavItem[] = [
     name: "Point of Sale",
     subItems: [
       { name: "Sales List", path: PATH_DASHBOARD.pos.sales },
+      { name: "Drawer Close Reports", path: PATH_DASHBOARD.pos.drawerCloseReports },
       { name: "Sale Returns", path: PATH_DASHBOARD.pos.returns },
       { name: "Refunds", path: PATH_DASHBOARD.pos.refunds },
     ],

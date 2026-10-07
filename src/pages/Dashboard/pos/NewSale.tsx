@@ -309,7 +309,7 @@ export default function NewSale() {
         <Stack spacing={1.5}>
           <PointOfSaleRoundedIcon color="primary" sx={{ alignSelf: "center", fontSize: 44 }} />
           <Typography variant="h5">Open POS drawer first</Typography>
-          <Typography color="text.secondary">Cashier sales are blocked until the logged-in user opens a drawer for their assigned location.</Typography>
+          <Typography color="text.secondary">Sales are blocked until a drawer is open for your assigned location.</Typography>
           <Button component={RouterLink} to={PATH_DASHBOARD.pos.root} variant="contained">Go to POS</Button>
         </Stack>
       </Card>
