@@ -8,7 +8,7 @@ import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import { Box, Button, ButtonBase, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Skeleton, Stack, TextField, Typography } from "@mui/material";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router";
 import { toast } from "react-toastify";
 import PageMeta from "../../../components/common/PageMeta";
@@ -72,24 +72,46 @@ export default function PosLanding() {
   const [closeOpen, setCloseOpen] = useState(false);
   const [closeForm, setCloseForm] = useState({ bank: "", card: "", cash: "", expense: "", mobile: "", note: "" });
   const [lastClose, setLastClose] = useState<CloseDrawerResult | null>(null);
+  const refreshInFlight = useRef(false);
   const countedCash = amount(closeForm.cash);
   const countedCardTotal = amount(closeForm.card);
   const countedBankTransferTotal = amount(closeForm.bank);
   const countedMobileTotal = amount(closeForm.mobile);
   const cashExpenseAmount = amount(closeForm.expense);
 
-  const load = async () => {
-    setLoading(true);
+  /**
+   * A drawer is shared by everyone at one location, including staff on other
+   * devices. Polling keeps this operational state current without relying on
+   * a stale page refresh or a browser-only communication channel.
+   */
+  const load = useCallback(async (showLoading = true, showError = true) => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    if (showLoading) setLoading(true);
     try {
       setDrawer(await getCurrentDrawer());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to load POS drawer.");
+      if (showError) toast.error(error instanceof Error ? error.message : "Unable to load POS drawer.");
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
+      refreshInFlight.current = false;
     }
-  };
+  }, []);
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+    const refresh = () => {
+      if (document.visibilityState === "visible") void load(false, false);
+    };
+    const interval = window.setInterval(refresh, 10_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [load]);
 
   const submitOpen = async () => {
     if (amount(openingCash) < 0) return;
@@ -151,6 +173,11 @@ export default function PosLanding() {
   useEffect(() => {
     if (!loading && !drawer) setOpenDialog(true);
   }, [drawer, loading]);
+
+  // A close completed on another device makes this dialog invalid immediately.
+  useEffect(() => {
+    if (!drawer) setCloseOpen(false);
+  }, [drawer]);
 
   return <>
     <PageMeta description="Open POS drawer and choose cashier actions." title="POS | Mobee Suite" />
