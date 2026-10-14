@@ -4,6 +4,7 @@ import LocalAtmRoundedIcon from "@mui/icons-material/LocalAtmRounded";
 import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
 import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
 import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import StorefrontRoundedIcon from "@mui/icons-material/StorefrontRounded";
 import { Box, Button, ButtonBase, Card, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Skeleton, Stack, TextField, Typography } from "@mui/material";
@@ -227,6 +228,7 @@ export default function PosLanding() {
           </Card>
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" } }}>
             <ActionCard description="Scan item, choose customer, collect payment." icon={<PointOfSaleRoundedIcon />} label="Create Sale" to={`${PATH_DASHBOARD.pos.newSale}?mode=pos`} />
+            <ActionCard description="Exchange an eligible original item. No cash refunds." icon={<ReplayRoundedIcon />} label="Return / Exchange" to={PATH_DASHBOARD.pos.returns} />
             {can(USER_PERMISSIONS.SALES_VIEW) ? <ActionCard description="Review and re-print invoices." icon={<ReceiptLongRoundedIcon />} label="Sales List" to={`${PATH_DASHBOARD.pos.sales}?mode=pos`} /> : null}
             {can(USER_PERMISSIONS.SALES_VIEW) ? <ActionCard description="Review saved shift closings and cash reconciliation." icon={<LocalAtmRoundedIcon />} label="Drawer Close Reports" to={PATH_DASHBOARD.pos.drawerCloseReports} /> : null}
             {can(USER_PERMISSIONS.REPAIRS_CREATE) ? <ActionCard description="Receive customer devices and print job receipt." icon={<BuildRoundedIcon />} label="Create Repair Job" to={`${PATH_DASHBOARD.repairs.jobs}?mode=pos&create=1`} /> : null}

@@ -2,7 +2,6 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import KeyboardRoundedIcon from "@mui/icons-material/KeyboardRounded";
-import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import PersonAddAlt1RoundedIcon from "@mui/icons-material/PersonAddAlt1Rounded";
 import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
@@ -13,11 +12,10 @@ import { toast } from "react-toastify";
 import PageMeta from "../../../components/common/PageMeta";
 import useAuth from "../../../hooks/useAuth";
 import { getCurrentDrawer, type PosDrawer } from "../../../redux/slices/posRedux/drawerRedux";
-import { createSale, searchSaleCustomers, searchSaleProducts, type PaymentMethod, type SaleCustomer, type SaleDetail, type SaleProductSearchItem } from "../../../redux/slices/posRedux/saleRedux";
+import { createSale, searchSaleCustomers, searchSaleProducts, type PaymentMethod, type SaleCustomer, type SaleProductSearchItem } from "../../../redux/slices/posRedux/saleRedux";
 import { PATH_DASHBOARD } from "../../../routes/paths";
 import { USER_ROLES } from "../../../utils/constants";
 import { fCurrency } from "../../../utils/formatNumber";
-import { printSaleReceipt } from "../../../utils/printSaleReceipt";
 
 type CartItem = {
   availableStockIds: number[];
@@ -40,10 +38,17 @@ type NewCustomerDraft = {
   phone: string;
 };
 
+type PaymentLine = {
+  amount: number;
+  method: PaymentMethod;
+  referenceNo: string;
+};
+
 const methods: Array<{ label: string; value: PaymentMethod }> = [
   { label: "Cash", value: "cash" },
   { label: "Card", value: "card" },
   { label: "Bank Transfer", value: "bankTransfer" },
+  { label: "Mobile Payment", value: "mobile" },
 ];
 
 const toAmount = (value: string) => Number(value.replace(/[^\d.]/g, "")) || 0;
@@ -74,9 +79,7 @@ export default function NewSale() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [saleDiscount, setSaleDiscount] = useState(0);
   const [priceOverrideReason, setPriceOverrideReason] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [referenceNo, setReferenceNo] = useState("");
-  const [lastSale, setLastSale] = useState<SaleDetail | null>(null);
+  const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([{ amount: 0, method: "cash", referenceNo: "" }]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -116,6 +119,8 @@ export default function NewSale() {
     ? Math.max(0, subTotal - itemDiscount)
     : Math.max(0, subTotal - itemDiscount - minimumSaleTotal);
   const total = Math.max(0, subTotal - itemDiscount - saleDiscount);
+  const paidTotal = useMemo(() => paymentLines.reduce((sum, payment) => sum + payment.amount, 0), [paymentLines]);
+  const paymentDifference = Number((total - paidTotal).toFixed(2));
   const needsPriceOverride = useMemo(() => (
     items.some((item) => (
       item.unitPrice > item.mrpPrice
@@ -123,6 +128,42 @@ export default function NewSale() {
     ))
     || total < minimumSaleTotal
   ), [items, minimumSaleTotal, total]);
+
+  useEffect(() => {
+    setPaymentLines((current) => current.length === 1 && current[0].method === "cash"
+      ? [{ ...current[0], amount: total }]
+      : current);
+  }, [total]);
+
+  const updatePaymentLine = (index: number, patch: Partial<PaymentLine>) => {
+    setPaymentLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line));
+  };
+
+  const addPaymentLine = () => {
+    const available = methods.find(({ value }) => !paymentLines.some((line) => line.method === value));
+    if (!available) { toast.info("Each payment method can be used once."); return; }
+    setPaymentLines((current) => [...current, { amount: 0, method: available.value, referenceNo: "" }]);
+  };
+
+  const resetForNextSale = () => {
+    // Invalidate any pending product search so an old result cannot reappear on a new sale.
+    productSearchRequestRef.current += 1;
+    scannerLookupInFlightRef.current = false;
+    setProductSearch("");
+    setProductOptions([]);
+    setCustomerSearch("");
+    setCustomerOptions([]);
+    setSelectedCustomer(null);
+    setNewCustomerName("");
+    setNewCustomerPhone("");
+    setNewCustomerDraft(null);
+    setQuickCustomerOpen(false);
+    setCustomerDialogOpen(false);
+    setItems([]);
+    setSaleDiscount(0);
+    setPriceOverrideReason("");
+    setPaymentLines([{ amount: 0, method: "cash", referenceNo: "" }]);
+  };
 
   const addProduct = (product: SaleProductSearchItem | null) => {
     if (!product) return;
@@ -191,6 +232,10 @@ export default function NewSale() {
     if (!locationId) { toast.error("Your account does not have an assigned sale location."); return; }
     if (!drawer) { toast.error("Open your POS drawer before creating a sale."); return; }
     if (!items.length) { toast.error("Add at least one product."); return; }
+    if (!selectedCustomer && !newCustomerDraft) {
+      toast.error("Select an existing customer or add a new customer before completing the sale.");
+      return;
+    }
     if (!isAdministrator && items.some((item) => item.unitPrice * item.quantity - item.discountAmount < item.lowestSellingPrice * item.quantity)) {
       toast.error("Discount cannot reduce a product below its lowest selling price.");
       return;
@@ -207,6 +252,14 @@ export default function NewSale() {
       toast.error("Enter an override reason for this administrator price exception.");
       return;
     }
+    if (Math.abs(paymentDifference) > 0.009) {
+      toast.error(paymentDifference > 0 ? `Collect the remaining ${fCurrency(paymentDifference)} before completing the sale.` : "Payment cannot exceed the sale total.");
+      return;
+    }
+    if (paymentLines.some((payment) => payment.method !== "cash" && !payment.referenceNo.trim())) {
+      toast.error("Enter a reference number for every non-cash payment.");
+      return;
+    }
     setSaving(true);
     try {
       const draftCustomer = newCustomerDraft
@@ -218,7 +271,7 @@ export default function NewSale() {
         return;
       }
       const sale = await createSale({
-        customer: selectedCustomer ? { id: selectedCustomer.id } : draftCustomer ?? undefined,
+        customer: selectedCustomer ? { id: selectedCustomer.id } : draftCustomer!,
         discountAmount: saleDiscount,
         priceOverrideReason: needsPriceOverride ? priceOverrideReason.trim() : undefined,
         items: items.map((item) => ({
@@ -229,23 +282,15 @@ export default function NewSale() {
           unitPrice: item.unitPrice,
         })),
         locationId,
-        payment: { amount: total, method: paymentMethod, referenceNo: referenceNo.trim() || undefined },
+        payments: paymentLines.map((payment) => ({
+          amount: payment.amount,
+          method: payment.method,
+          referenceNo: payment.referenceNo.trim() || undefined,
+        })),
       });
-      setLastSale(sale);
-      setItems([]);
-      setSaleDiscount(0);
-      setPriceOverrideReason("");
-      setSelectedCustomer(null);
-      setCustomerSearch("");
-      setNewCustomerName("");
-      setNewCustomerPhone("");
-      setNewCustomerDraft(null);
-      setQuickCustomerOpen(false);
-      setCustomerDialogOpen(false);
-      setReferenceNo("");
+      resetForNextSale();
       toast.success(`Sale ${sale.invoiceNo} completed.`);
-      printSaleReceipt(sale);
-      window.setTimeout(() => productInputRef.current?.focus(), 250);
+      navigate(PATH_DASHBOARD.pos.saleReceipt(sale.id), { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to create sale.");
     } finally {
@@ -270,7 +315,7 @@ export default function NewSale() {
     };
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
-  }, [items, navigate, saving, total, saleDiscount, paymentMethod, priceOverrideReason, referenceNo, selectedCustomer, newCustomerDraft, drawer, locationId, needsPriceOverride, isAdministrator]);
+  }, [items, navigate, saving, total, saleDiscount, paymentLines, paymentDifference, priceOverrideReason, selectedCustomer, newCustomerDraft, drawer, locationId, needsPriceOverride, isAdministrator]);
 
   const canAddCustomer = Boolean(customerSearch.trim()) && !selectedCustomer && !newCustomerDraft && customerOptions.length === 0;
 
@@ -324,7 +369,6 @@ export default function NewSale() {
         <Stack alignItems="center" direction="row" spacing={1}><PointOfSaleRoundedIcon color="primary" /><Typography variant="h4">Create Sale</Typography><Chip color="success" label={`${drawer.locationName} • Drawer #${drawer.id}`} size="small" /></Stack>
         <Stack direction="row" gap={1} flexWrap="wrap">
           <Button color="inherit" onClick={() => navigate(PATH_DASHBOARD.pos.root)} startIcon={<ArrowBackRoundedIcon />} variant="outlined">Back to POS</Button>
-          {lastSale ? <Button onClick={() => printSaleReceipt(lastSale)} startIcon={<LocalPrintshopOutlinedIcon />} variant="outlined">Print last bill</Button> : null}
         </Stack>
       </Stack>
       {!locationId ? <Card sx={{ borderColor: "warning.main", borderStyle: "solid", borderWidth: 1, p: 2 }}>
@@ -360,6 +404,7 @@ export default function NewSale() {
                   if (reason === "input") setProductOptions([]);
                 }}
                 options={productOptions}
+                value={null}
                 renderInput={(params) => <TextField {...params} autoComplete="off" autoFocus inputRef={productInputRef} label="Scan barcode / IMEI / serial or search product" onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void scanAndAddExactProduct(); } }} slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><SearchRoundedIcon /></InputAdornment> } }} />}
                 renderOption={(props, option) => <Box component="li" {...props}><Stack width="100%"><Stack direction="row" justifyContent="space-between"><Typography fontWeight={700}>{option.productName}</Typography><Chip label={option.matchType} size="small" /></Stack><Typography color="text.secondary" variant="caption">{option.productSku ?? `Product #${option.productId}`} • {option.locationName} • {option.quantityAvailable} available • MRP {fCurrency(Number(option.mrpPrice))} • Floor {fCurrency(Number(option.sellingPrice))} • Cost {fCurrency(Number(option.costPrice))}</Typography></Stack></Box>}
               />
@@ -482,6 +527,7 @@ export default function NewSale() {
                 }
               }}
               options={customerOptions}
+              value={selectedCustomer}
               renderInput={(params) => <TextField {...params} label="Search phone or name" />}
             />
             {selectedCustomer ? <Box sx={{ bgcolor: "success.main", borderRadius: 2, color: "success.contrastText", mt: 1.25, px: 1.5, py: 1 }}>
@@ -549,8 +595,45 @@ export default function NewSale() {
           <Card sx={{ borderRadius: 3, p: 2 }}>
             <Typography fontWeight={800} mb={1}>Payment</Typography>
             <Stack spacing={1.5}>
-              <TextField label="Payment method" onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} select SelectProps={{ native: true }} value={paymentMethod}>{methods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}</TextField>
-              <TextField label="Reference No" onChange={(event) => setReferenceNo(event.target.value)} value={referenceNo} />
+              {paymentLines.map((payment, index) => <Box key={`${payment.method}-${index}`} sx={{ border: 1, borderColor: "divider", borderRadius: 2, p: 1.25 }}>
+                <Stack direction="row" gap={1} alignItems="center">
+                  <TextField
+                    fullWidth
+                    label="Method"
+                    onChange={(event) => updatePaymentLine(index, { method: event.target.value as PaymentMethod, referenceNo: "" })}
+                    select
+                    SelectProps={{ native: true }}
+                    size="small"
+                    value={payment.method}
+                  >
+                    {methods.filter(({ value }) => value === payment.method || !paymentLines.some((line, lineIndex) => lineIndex !== index && line.method === value)).map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
+                  </TextField>
+                  {paymentLines.length > 1 ? <IconButton aria-label="Remove payment method" color="error" onClick={() => setPaymentLines((current) => current.filter((_line, lineIndex) => lineIndex !== index))} size="small"><DeleteOutlineRoundedIcon /></IconButton> : null}
+                </Stack>
+                <TextField
+                  fullWidth
+                  inputProps={{ inputMode: "decimal", style: { textAlign: "right" } }}
+                  label="Amount"
+                  onChange={(event) => updatePaymentLine(index, { amount: toAmount(event.target.value) })}
+                  size="small"
+                  sx={{ mt: 1 }}
+                  value={String(payment.amount)}
+                />
+                {payment.method !== "cash" ? <TextField
+                  fullWidth
+                  label="Reference No"
+                  onChange={(event) => updatePaymentLine(index, { referenceNo: event.target.value })}
+                  required
+                  size="small"
+                  sx={{ mt: 1 }}
+                  value={payment.referenceNo}
+                /> : null}
+              </Box>)}
+              <Button disabled={paymentLines.length >= methods.length} onClick={addPaymentLine} size="small" variant="outlined">Add payment method</Button>
+              <Stack direction="row" justifyContent="space-between" sx={{ bgcolor: paymentDifference === 0 ? "success.lighter" : "warning.lighter", borderRadius: 1.5, px: 1.25, py: 0.9 }}>
+                <Typography fontWeight={700} variant="body2">{paymentDifference > 0 ? "Remaining to collect" : paymentDifference < 0 ? "Over-collected" : "Payment complete"}</Typography>
+                <Typography color={paymentDifference === 0 ? "success.main" : "warning.main"} fontWeight={900} variant="body2">{fCurrency(Math.abs(paymentDifference))}</Typography>
+              </Stack>
               <TextField helperText={!isAdministrator ? `Max allowed ${fCurrency(maxSaleDiscount)}` : undefined} inputProps={{ inputMode: "decimal" }} label="Sale discount" onChange={(event) => setSaleDiscount(Math.min(maxSaleDiscount, toAmount(event.target.value)))} value={String(saleDiscount)} />
               {isAdministrator && needsPriceOverride ? <Box sx={{ bgcolor: "error.lighter", border: 1, borderColor: "error.main", borderRadius: 2, p: 1.25 }}>
                 <Typography color="error.main" fontWeight={800} variant="body2">Administrator approval required</Typography>
@@ -569,7 +652,7 @@ export default function NewSale() {
               <Button disabled variant="outlined">Claim voucher — coming soon</Button>
               <Divider />
               <Stack spacing={0.75}><Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Subtotal</Typography><Typography>{fCurrency(subTotal)}</Typography></Stack><Stack direction="row" justifyContent="space-between"><Typography color="text.secondary">Discount</Typography><Typography>{fCurrency(itemDiscount + saleDiscount)}</Typography></Stack><Stack direction="row" justifyContent="space-between"><Typography variant="h5">Total</Typography><Typography variant="h5">{fCurrency(total)}</Typography></Stack></Stack>
-              <Button disabled={saving || !items.length} onClick={() => void create()} size="large" startIcon={<AddRoundedIcon />} variant="contained">Complete sale & print bill</Button>
+              <Button disabled={saving || !items.length || !selectedCustomer && !newCustomerDraft || Math.abs(paymentDifference) > 0.009} onClick={() => void create()} size="large" startIcon={<AddRoundedIcon />} variant="contained">Complete sale & print bill</Button>
             </Stack>
           </Card>
         </Stack>
