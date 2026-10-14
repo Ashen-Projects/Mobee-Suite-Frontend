@@ -2,7 +2,8 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import { get, post } from "../../../inteceptor";
 import { dispatch } from "../../store";
 
-export type PaymentMethod = "cash" | "card" | "bankTransfer";
+export type PaymentMethod = "cash" | "card" | "bankTransfer" | "mobile";
+export type SalePaymentInput = { amount: number; method: PaymentMethod; referenceNo?: string };
 
 export type SaleProductSearchItem = {
   barcode?: string | null;
@@ -28,7 +29,7 @@ export type SaleCustomer = {
 };
 
 export type SaleInput = {
-  customer?: { id?: number; name?: string; phone?: string };
+  customer: { id?: number; name?: string; phone?: string };
   discountAmount: number;
   priceOverrideReason?: string;
   items: Array<{
@@ -39,7 +40,7 @@ export type SaleInput = {
     unitPrice: number;
   }>;
   locationId: number;
-  payment: { amount: number; method: PaymentMethod; referenceNo?: string };
+  payments: SalePaymentInput[];
 };
 
 export type SaleDetail = {

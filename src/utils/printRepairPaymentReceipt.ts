@@ -22,6 +22,17 @@ export const printRepairPaymentReceipt = (job: RepairJobDetail, payment: RepairP
   const printedAt = new Date().toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
   const receivedAt = new Date(payment.timestamp).toLocaleString("en-LK", { dateStyle: "medium", timeStyle: "short" });
   const paymentNo = `RCP-${job.jobNo}-${String(payment.id).padStart(5, "0")}`;
+  const installedParts = job.parts.filter((part) => part.status === "consumed");
+  const installedPartsMarkup = installedParts.length
+    ? `<section class="parts">
+        <p class="section-title">Parts installed</p>
+        ${installedParts.map((part) => `<div class="part-row">
+          <strong>${escapeHtml(part.productName || part.description || "Stock item")}</strong>
+          ${part.barcode ? `<span>Barcode: ${escapeHtml(part.barcode)}</span>` : ""}
+        </div>`).join("")}
+      </section>
+      <div class="line"></div>`
+    : "";
   const win = window.open("", "_blank", "width=420,height=720");
   if (!win) throw new Error("Popup blocked. Allow popups to print the repair payment receipt.");
 
@@ -48,6 +59,12 @@ export const printRepairPaymentReceipt = (job: RepairJobDetail, payment: RepairP
     .paid { color: #087f23; }
     .due { color: #b42318; }
     .device { font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
+    .parts { margin: 1.2mm 0; }
+    .section-title { font-size: 10px; font-weight: 800; margin: 0 0 .6mm; text-transform: uppercase; }
+    .part-row { border-bottom: 1px dotted #aaa; padding: .55mm 0; }
+    .part-row:last-child { border-bottom: 0; }
+    .part-row strong, .part-row span { display: block; overflow-wrap: anywhere; }
+    .part-row span { color: #555; font-size: 9px; margin-top: .2mm; }
     .muted { color: #666; }
     p { margin: 0; }
     @media print {
@@ -71,6 +88,7 @@ export const printRepairPaymentReceipt = (job: RepairJobDetail, payment: RepairP
     <div class="row"><span>Phone</span><strong>${escapeHtml(job.customerPhone ?? "—")}</strong></div>
     <p class="device">${escapeHtml(job.deviceName)}</p>
     <div class="line"></div>
+    ${installedPartsMarkup}
     <div class="row"><span>Repair total</span><strong>${escapeHtml(fCurrency(Number(job.finalCost)))}</strong></div>
     <div class="row"><span>Payment method</span><strong>${escapeHtml(paymentMethodLabel[payment.method])}</strong></div>
     ${payment.referenceNo ? `<div class="row"><span>Reference</span><strong>${escapeHtml(payment.referenceNo)}</strong></div>` : ""}

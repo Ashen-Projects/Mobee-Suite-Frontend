@@ -24,6 +24,8 @@ export const PATH_DASHBOARD = {
   pos: {
     root: path(ROOTS_DASHBOARD, "/pos"),
     newSale: path(ROOTS_DASHBOARD, "/pos/new-sale"),
+    receipt: path(ROOTS_DASHBOARD, "/pos/receipt/:saleId"),
+    saleReceipt: (saleId: number | string) => path(ROOTS_DASHBOARD, `/pos/receipt/${saleId}`),
     sales: path(ROOTS_DASHBOARD, "/pos/sales"),
     drawerCloseReports: path(ROOTS_DASHBOARD, "/pos/drawer-close-reports"),
     returns: path(ROOTS_DASHBOARD, "/pos/returns"),
@@ -113,6 +115,8 @@ export const ROUTE_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   [PATH_DASHBOARD.customers.root]: [USER_PERMISSIONS.CUSTOMERS_VIEW],
   [PATH_DASHBOARD.pos.root]: [USER_PERMISSIONS.SALES_CREATE],
   [PATH_DASHBOARD.pos.newSale]: [USER_PERMISSIONS.SALES_CREATE],
+  [PATH_DASHBOARD.pos.receipt]: [USER_PERMISSIONS.SALES_CREATE],
+  [PATH_DASHBOARD.pos.returns]: [USER_PERMISSIONS.SALES_CREATE],
   [PATH_DASHBOARD.pos.sales]: [USER_PERMISSIONS.SALES_VIEW],
   [PATH_DASHBOARD.pos.drawerCloseReports]: [USER_PERMISSIONS.SALES_VIEW],
   [PATH_DASHBOARD.products.list]: [USER_PERMISSIONS.PRODUCTS_VIEW],

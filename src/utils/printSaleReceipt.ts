@@ -38,8 +38,9 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   const printedAt = new Intl.DateTimeFormat(DEFAULT_LOCALE, { dateStyle: "medium", timeStyle: "short" }).format(new Date());
   const saleDate = new Intl.DateTimeFormat(DEFAULT_LOCALE, { dateStyle: "medium" }).format(new Date(sale.timestamp));
   const saleTime = new Intl.DateTimeFormat(DEFAULT_LOCALE, { timeStyle: "short" }).format(new Date(sale.timestamp));
-  const payment = sale.payments[0];
-  const change = Math.max(0, Number(sale.paidAmount) - Number(sale.totalAmount));
+  const paymentRows = sale.payments.map((payment) => `
+    <div class="row"><span>${escapeHtml(payment.method === "bankTransfer" ? "Bank transfer" : payment.method === "mobile" ? "Mobile payment" : payment.method.charAt(0).toUpperCase() + payment.method.slice(1))}${payment.referenceNo ? ` · ${escapeHtml(payment.referenceNo)}` : ""}</span><span>${fCurrency(Number(payment.amount))}</span></div>
+  `).join("");
   const invoiceBarcode = barcodeSvg(sale.invoiceNo);
   const itemRows = sale.items.map((item) => {
     const warranty = warrantyLabel(item.warrantyPeriodMonths, item.warrantyType);
@@ -56,9 +57,43 @@ export const printSaleReceipt = (sale: SaleDetail) => {
   `;
   }).join("");
   const hasWarranty = sale.items.some((item) => Boolean(warrantyLabel(item.warrantyPeriodMonths, item.warrantyType)));
-  const win = window.open("", "_blank", "width=420,height=720");
-  if (!win) return;
-  win.document.write(`<!doctype html>
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "border:0;height:0;left:-10000px;position:fixed;top:-10000px;width:0;";
+  document.body.appendChild(frame);
+  const documentToPrint = frame.contentDocument;
+  const windowToPrint = frame.contentWindow;
+  if (!documentToPrint || !windowToPrint) {
+    frame.remove();
+    return;
+  }
+
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    window.setTimeout(() => frame.remove(), 0);
+  };
+  const print = () => {
+    windowToPrint.focus();
+    windowToPrint.print();
+  };
+  windowToPrint.addEventListener("afterprint", cleanup, { once: true });
+  // Some browser/driver combinations do not emit afterprint after a cancelled dialog.
+  window.setTimeout(cleanup, 60_000);
+  frame.addEventListener("load", () => {
+    const images = Array.from(documentToPrint.images);
+    Promise.all(images.map((image) => image.complete
+      ? Promise.resolve()
+      : new Promise<void>((resolve) => {
+        image.addEventListener("error", () => resolve(), { once: true });
+        image.addEventListener("load", () => resolve(), { once: true });
+      })))
+      .finally(() => window.setTimeout(print, 80));
+  }, { once: true });
+
+  documentToPrint.open();
+  documentToPrint.write(`<!doctype html>
 <html>
   <head>
     <title>${escapeHtml(sale.invoiceNo)}</title>
@@ -155,9 +190,9 @@ export const printSaleReceipt = (sale: SaleDetail) => {
         <div class="row"><span>Subtotal</span><span>${fCurrency(Number(sale.subTotal))}</span></div>
         <div class="row"><span>Discount</span><span>${fCurrency(Number(sale.discountAmount))}</span></div>
         <div class="row total"><span>Total</span><span>${fCurrency(Number(sale.totalAmount))}</span></div>
-        <div class="row"><span>Payment</span><span>${payment ? payment.method.toUpperCase() : "—"}</span></div>
+        ${paymentRows || '<div class="row"><span>Payment</span><span>—</span></div>'}
         <div class="row"><span>Paid</span><span>${fCurrency(Number(sale.paidAmount))}</span></div>
-        <div class="row"><span>Balance</span><span>${fCurrency(change)}</span></div>
+        <div class="row"><span>Balance</span><span>${fCurrency(Math.max(0, Number(sale.totalAmount) - Number(sale.paidAmount)))}</span></div>
       </div>
       <div class="line"></div>
       ${hasWarranty ? '<p class="center muted">Warranty starts from the invoice date. Keep this receipt for warranty claims.</p><div class="line"></div>' : ""}
@@ -167,10 +202,7 @@ export const printSaleReceipt = (sale: SaleDetail) => {
       <p class="center muted printed">Printed ${printedAt}</p>
       <p class="developer">${SOFTWARE_DEVELOPER}</p>
     </div>
-    <script>
-      window.onload = () => { window.focus(); window.print(); };
-    </script>
   </body>
 </html>`);
-  win.document.close();
+  documentToPrint.close();
 };

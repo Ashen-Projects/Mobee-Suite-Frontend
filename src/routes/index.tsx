@@ -24,8 +24,10 @@ import StockList from "../pages/Dashboard/inventory/StockList";
 import DamagedStock from "../pages/Dashboard/inventory/DamagedStock";
 import PosLanding from "../pages/Dashboard/pos/PosLanding";
 import NewSale from "../pages/Dashboard/pos/NewSale";
+import SaleReceipt from "../pages/Dashboard/pos/SaleReceipt";
 import SalesList from "../pages/Dashboard/pos/SalesList";
 import DrawerCloseReports from "../pages/Dashboard/pos/DrawerCloseReports";
+import SaleReturns from "../pages/Dashboard/pos/SaleReturns";
 import RepairJobs from "../pages/Dashboard/repairs/RepairJobs";
 import Locations from "../pages/Dashboard/settings/Locations";
 import DocumentSequences from "../pages/Dashboard/settings/DocumentSequences";
@@ -79,9 +81,10 @@ export default function Router() {
           children: [
             { index: true, element: withPermission(PATH_DASHBOARD.pos.root, <PosLanding />) },
             { path: "new-sale", element: withPermission(PATH_DASHBOARD.pos.newSale, <NewSale />) },
+            { path: "receipt/:saleId", element: withPermission(PATH_DASHBOARD.pos.receipt, <SaleReceipt />) },
             { path: "sales", element: withPermission(PATH_DASHBOARD.pos.sales, <SalesList />) },
             { path: "drawer-close-reports", element: withPermission(PATH_DASHBOARD.pos.drawerCloseReports, <DrawerCloseReports />) },
-            { path: "returns", element: placeholder(PATH_DASHBOARD.pos.returns, "Point of Sale", "Sale Returns", "Review and manage returned sale items.") },
+            { path: "returns", element: withPermission(PATH_DASHBOARD.pos.returns, <SaleReturns />) },
             { path: "refunds", element: placeholder(PATH_DASHBOARD.pos.refunds, "Point of Sale", "Refunds", "Review and manage customer refunds.") },
           ],
         },
